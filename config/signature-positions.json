@@ -1,0 +1,52 @@
+{
+  "_comment": "Signature positions in PDF points (1pt = 1/72 inch). Y-axis origin is at the BOTTOM of the page (pdf-lib coordinate system). A4 height = 841.89pt. These coordinates are placeholder values and must be tuned against actual PDF template files.",
+  "labor_contract": {
+    "page": 2,
+    "x": 350,
+    "y": 80,
+    "width": 180,
+    "height": 60
+  },
+  "personal_info_consent": {
+    "page": 0,
+    "x": 380,
+    "y": 60,
+    "width": 160,
+    "height": 50
+  },
+  "bank_account": {
+    "page": 0,
+    "x": 360,
+    "y": 70,
+    "width": 160,
+    "height": 50
+  },
+  "health_certificate": {
+    "page": 0,
+    "x": 380,
+    "y": 55,
+    "width": 160,
+    "height": 50
+  },
+  "criminal_check_consent": {
+    "page": 0,
+    "x": 370,
+    "y": 65,
+    "width": 160,
+    "height": 50
+  },
+  "emergency_contact": {
+    "page": 0,
+    "x": 360,
+    "y": 60,
+    "width": 160,
+    "height": 50
+  },
+  "data_security_pledge": {
+    "page": 1,
+    "x": 350,
+    "y": 75,
+    "width": 180,
+    "height": 60
+  }
+}
