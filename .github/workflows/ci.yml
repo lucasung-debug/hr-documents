@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - 'claude/**'
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  ci:
+    name: Type Check / Lint / Build
+    runs-on: ubuntu-latest
+
+    env:
+      NEXT_PUBLIC_BASE_URL: http://localhost:3000
+      JWT_SECRET: ci-dummy-not-used
+      GOOGLE_SPREADSHEET_ID: dummy
+      SHEET_EMPLOYEE_MASTER: EMPLOYEE_MASTER
+      SHEET_DOCUMENT_STATUS: DOCUMENT_STATUS
+      GMAIL_CLIENT_ID: dummy
+      GMAIL_CLIENT_SECRET: dummy
+      GMAIL_CLIENT_REFRESH_TOKEN: dummy
+      GMAIL_SENDER_ADDRESS: ci@example.com
+      HR_EMAIL_RECIPIENTS: ci@example.com
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npm run type-check
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
