@@ -6,24 +6,20 @@ let sheetsClient: sheets_v4.Sheets | null = null
 export function getSheetsClient(): sheets_v4.Sheets {
   if (sheetsClient) return sheetsClient
 
-  const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL
-  const privateKey = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n')
+  const clientId = process.env.GMAIL_CLIENT_ID
+  const clientSecret = process.env.GMAIL_CLIENT_SECRET
+  const refreshToken = process.env.GMAIL_CLIENT_REFRESH_TOKEN
   const spreadsheetId = process.env.GOOGLE_SPREADSHEET_ID
 
-  if (!email || !privateKey || !spreadsheetId) {
+  if (!clientId || !clientSecret || !refreshToken || !spreadsheetId) {
     throw new Error(
-      'Missing required Google Sheets environment variables: ' +
-        'GOOGLE_SERVICE_ACCOUNT_EMAIL, GOOGLE_PRIVATE_KEY, GOOGLE_SPREADSHEET_ID'
+      'Missing required environment variables: ' +
+        'GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET, GMAIL_CLIENT_REFRESH_TOKEN, GOOGLE_SPREADSHEET_ID'
     )
   }
 
-  const auth = new google.auth.GoogleAuth({
-    credentials: {
-      client_email: email,
-      private_key: privateKey,
-    },
-    scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-  })
+  const auth = new google.auth.OAuth2(clientId, clientSecret)
+  auth.setCredentials({ refresh_token: refreshToken })
 
   sheetsClient = google.sheets({ version: 'v4', auth })
   return sheetsClient
