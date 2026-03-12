@@ -1,0 +1,27 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { DOCUMENT_KEYS, DOCUMENT_LABELS, SIGNATURE_REQUIRED } from '@/types/document'
+import { getDocumentStatuses } from '@/lib/sheets/document-status'
+import type { DocListItem } from '@/types/api'
+
+export async function GET(request: NextRequest) {
+  const employeeId = request.headers.get('x-employee-id')
+  if (!employeeId) {
+    return NextResponse.json({ error: '인증 정보가 없습니다.' }, { status: 401 })
+  }
+
+  try {
+    const statuses = await getDocumentStatuses(employeeId)
+
+    const docs: DocListItem[] = DOCUMENT_KEYS.map((key) => ({
+      key,
+      label: DOCUMENT_LABELS[key],
+      status: statuses[key],
+      signatureRequired: SIGNATURE_REQUIRED[key],
+    }))
+
+    return NextResponse.json({ docs })
+  } catch (err) {
+    console.error('[docs/list] error:', err instanceof Error ? err.message : 'unknown')
+    return NextResponse.json({ error: '서류 목록 조회 중 오류가 발생했습니다.' }, { status: 500 })
+  }
+}
