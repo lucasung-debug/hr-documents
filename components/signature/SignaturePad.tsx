@@ -30,18 +30,18 @@ export function SignaturePad({ onCapture, disabled = false }: SignaturePadProps)
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="border-2 border-dashed border-gray-300 rounded-xl overflow-hidden bg-white touch-none">
+      <div className="border-2 border-dashed border-apple-gray-200 rounded-apple-lg overflow-hidden bg-white touch-none">
         <SignatureCanvas
           ref={padRef}
           onEnd={handleEnd}
           penColor="#1a1a1a"
           canvasProps={{
-            className: 'w-full',
-            style: { width: '100%', height: '200px', touchAction: 'none' },
+            className: 'w-full h-[200px] lg:h-[420px]',
+            style: { width: '100%', height: undefined, touchAction: 'none' },
           }}
         />
       </div>
-      <p className="text-xs text-gray-500 text-center">위 박스 안에 서명해주세요</p>
+      <p className="text-xs text-apple-gray-500 text-center">위 박스 안에 서명해주세요</p>
       <div className="flex gap-3">
         <Button
           variant="secondary"

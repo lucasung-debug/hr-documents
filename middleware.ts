@@ -37,7 +37,7 @@ export async function middleware(request: NextRequest) {
     // Inject employee_id into request headers for API routes to consume
     const requestHeaders = new Headers(request.headers)
     requestHeaders.set('x-employee-id', String(payload.employee_id ?? ''))
-    requestHeaders.set('x-employee-name', String(payload.name ?? ''))
+    requestHeaders.set('x-employee-name', encodeURIComponent(String(payload.name ?? '')))
 
     return NextResponse.next({ request: { headers: requestHeaders } })
   } catch {

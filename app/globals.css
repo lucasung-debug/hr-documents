@@ -7,8 +7,9 @@
     -webkit-tap-highlight-color: transparent;
   }
 
+  /* Apple 디자인 시스템: 배경색 #f5f5f7, Inter 폰트 */
   body {
-    @apply bg-gray-50 text-gray-900 antialiased;
+    @apply bg-apple-gray-50 text-apple-gray-900 antialiased font-sans;
   }
 }
 

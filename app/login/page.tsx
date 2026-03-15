@@ -16,7 +16,6 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
 
   const handlePhoneChange = (value: string) => {
-    // Allow only digits
     setPhone(value.replace(/\D/g, '').slice(0, 11))
   }
 
@@ -51,15 +50,19 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4">
+    <div className="min-h-screen bg-apple-gray-50 flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-gray-900">입사 서류 전자서명</h1>
-          <p className="text-gray-500 mt-2">이름과 휴대전화번호로 본인 확인을 해주세요.</p>
+          <h1 className="text-[28px] font-bold text-apple-gray-900 tracking-[-0.02em]">
+            입사 서류 전자서명
+          </h1>
+          <p className="text-apple-gray-500 mt-2 text-[15px]">
+            이름과 휴대전화번호로 본인 확인을 해주세요.
+          </p>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <div className="bg-white rounded-apple-xl shadow-apple-md border border-apple-gray-100 p-8 lg:p-10">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-5">
             <Input
               id="login-name"
               label="이름"
@@ -81,10 +84,10 @@ export default function LoginPage() {
             />
 
             {error && (
-              <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>
+              <p className="text-sm text-red-600 bg-red-50 rounded-apple px-4 py-3">{error}</p>
             )}
 
-            <Button type="submit" loading={loading} size="lg" className="w-full mt-2">
+            <Button type="submit" loading={loading} size="lg" className="w-full mt-1">
               확인
             </Button>
           </form>

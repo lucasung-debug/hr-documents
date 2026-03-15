@@ -9,12 +9,12 @@ export function ProgressBar({ currentStep, totalSteps, stepLabels }: ProgressBar
 
   return (
     <div className="w-full">
-      <div className="flex justify-between text-xs text-gray-500 mb-1">
+      <div className="flex justify-between text-xs text-apple-gray-500 mb-1">
         {stepLabels ? (
           stepLabels.map((label, i) => (
             <span
               key={i}
-              className={i + 1 <= currentStep ? 'text-blue-600 font-medium' : ''}
+              className={i + 1 <= currentStep ? 'text-apple-blue font-medium' : ''}
             >
               {label}
             </span>
@@ -22,14 +22,14 @@ export function ProgressBar({ currentStep, totalSteps, stepLabels }: ProgressBar
         ) : (
           <>
             <span>시작</span>
-            <span className="text-blue-600 font-medium">{percentage}%</span>
+            <span className="text-apple-blue font-medium">{percentage}%</span>
             <span>완료</span>
           </>
         )}
       </div>
-      <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+      <div className="h-1.5 bg-apple-gray-100 rounded-full overflow-hidden">
         <div
-          className="h-full bg-blue-600 rounded-full transition-all duration-500"
+          className="h-full bg-apple-blue rounded-full transition-all duration-500"
           style={{ width: `${percentage}%` }}
         />
       </div>

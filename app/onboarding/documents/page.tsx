@@ -66,8 +66,23 @@ export default function DocumentsPage() {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center py-20">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+      <div className="flex flex-col gap-6">
+        <div>
+          <div className="h-7 w-48 bg-apple-gray-100 rounded-apple animate-pulse" />
+          <div className="h-4 w-72 bg-apple-gray-100 rounded-apple animate-pulse mt-2" />
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-5">
+          {Array.from({ length: 7 }).map((_, i) => (
+            <div key={i} className="rounded-apple-lg border border-apple-gray-100 p-5 shadow-apple-sm">
+              <div className="flex items-center justify-between mb-3">
+                <div className="h-5 w-32 bg-apple-gray-100 rounded animate-pulse" />
+                <div className="h-5 w-16 bg-apple-gray-100 rounded-full animate-pulse" />
+              </div>
+              <div className="h-3 w-full bg-apple-gray-100 rounded animate-pulse mb-2" />
+              <div className="h-8 w-28 bg-apple-gray-100 rounded-apple animate-pulse mt-4" />
+            </div>
+          ))}
+        </div>
       </div>
     )
   }
@@ -75,27 +90,29 @@ export default function DocumentsPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h2 className="text-xl font-bold text-gray-900">입사 서류 작성</h2>
-        <p className="text-gray-500 mt-1 text-sm">
+        <h2 className="text-[24px] font-bold text-apple-gray-900 tracking-[-0.01em]">입사 서류 작성</h2>
+        <p className="text-apple-gray-500 mt-1 text-[15px]">
           아래 서류를 순서대로 확인하고 동의해주세요.
         </p>
       </div>
 
       {error && (
-        <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>
+        <p className="text-sm text-red-600 bg-red-50 rounded-apple px-4 py-3">{error}</p>
       )}
 
       <DocumentList docs={docs} onConsent={handleConsent} />
 
-      <Button
-        onClick={handleCheckAll}
-        disabled={!allCompleted}
-        loading={checkingAll}
-        size="lg"
-        className="w-full"
-      >
-        다음 단계로
-      </Button>
+      <div className="flex lg:justify-end">
+        <Button
+          onClick={handleCheckAll}
+          disabled={!allCompleted}
+          loading={checkingAll}
+          size="lg"
+          className="w-full lg:w-auto lg:min-w-[160px]"
+        >
+          다음 단계로
+        </Button>
+      </div>
     </div>
   )
 }

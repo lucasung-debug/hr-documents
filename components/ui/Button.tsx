@@ -7,15 +7,15 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variantClasses = {
-  primary: 'bg-blue-600 hover:bg-blue-700 text-white disabled:bg-blue-300',
-  secondary: 'bg-gray-100 hover:bg-gray-200 text-gray-800 disabled:bg-gray-50 disabled:text-gray-400',
+  primary: 'bg-apple-blue hover:bg-apple-blue-hover text-white disabled:bg-apple-blue/40',
+  secondary: 'bg-apple-gray-100 hover:bg-apple-gray-200 text-apple-gray-900 disabled:bg-apple-gray-50 disabled:text-apple-gray-500',
   danger: 'bg-red-600 hover:bg-red-700 text-white disabled:bg-red-300',
 }
 
 const sizeClasses = {
-  sm: 'px-3 py-1.5 text-sm',
-  md: 'px-4 py-2 text-base',
-  lg: 'px-6 py-3 text-lg',
+  sm: 'px-4 py-2 text-sm',
+  md: 'px-5 py-2.5 text-base',
+  lg: 'px-6 py-3 text-base',
 }
 
 export function Button({
@@ -31,9 +31,9 @@ export function Button({
     <button
       disabled={disabled || loading}
       className={`
-        rounded-lg font-medium transition-colors duration-150
-        focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
-        disabled:cursor-not-allowed
+        rounded-full font-medium transition-all duration-150
+        focus:outline-none focus:ring-2 focus:ring-apple-blue focus:ring-offset-2
+        active:scale-[0.98] disabled:cursor-not-allowed disabled:active:scale-100
         ${variantClasses[variant]}
         ${sizeClasses[size]}
         ${className}
