@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { generatePdfSchema } from '@/lib/validators/input'
-import { generatePreviewImage, previewToBase64 } from '@/lib/pdf/puppeteer'
+import { generatePreviewWithFallback } from '@/lib/pdf/puppeteer'
 import { pdfExists } from '@/lib/storage/temp-files'
 import { createLogger } from '@/lib/logger'
 import { apiFromUnknown } from '@/lib/api'
@@ -33,10 +33,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const previewPath = await generatePreviewImage(employeeId, documentKey)
-    const previewUrl = await previewToBase64(previewPath)
+    const result = await generatePreviewWithFallback(employeeId, documentKey)
 
-    return NextResponse.json({ success: true, previewUrl })
+    return NextResponse.json({
+      success: true,
+      previewUrl: result.dataUrl,
+      previewType: result.type,
+    })
   } catch (err) {
     log.error({ err }, 'PDF 미리보기 생성 중 오류가 발생했습니다.')
     return apiFromUnknown(err)

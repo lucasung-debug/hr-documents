@@ -1,17 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { docConsentSchema } from '@/lib/validators/input'
-import { readSignature } from '@/lib/storage/temp-files'
+import { readSignature, ensureSessionDir, getPdfPath } from '@/lib/storage/temp-files'
 import { generateSignedPdf } from '@/lib/pdf/generator'
-import { generatePreviewImage, previewToBase64 } from '@/lib/pdf/puppeteer'
+import { generatePreviewWithFallback } from '@/lib/pdf/puppeteer'
+import { generatePdfFromTemplate } from '@/lib/sheets/template'
+import { getContractConditions } from '@/lib/sheets/contract'
+import { buildBaseVariables, buildContractVariables } from '@/lib/sheets/template-variables'
+import { getEmployeeById } from '@/lib/sheets/employee'
 import {
   findDocStatusByEmployeeId,
   updateDocumentStatus,
 } from '@/lib/sheets/document-status'
 import { DOC_STATUS } from '@/types/document'
+import { getSignaturePositionConfig } from '@/lib/pdf/signature-config'
+import { PDFDocument } from 'pdf-lib'
+import fs from 'fs'
 import { createLogger } from '@/lib/logger'
 import { apiFromUnknown } from '@/lib/api'
 
 const log = createLogger('[docs/consent]')
+
+const USE_SHEETS = process.env.USE_SHEETS_TEMPLATES === 'true'
 
 export async function POST(request: NextRequest) {
   const employeeId = request.headers.get('x-employee-id')
@@ -35,23 +44,94 @@ export async function POST(request: NextRequest) {
     // Read signature from temp storage
     const signatureBuffer = readSignature(employeeId)
 
-    // Generate signed PDF
-    const result = await generateSignedPdf(employeeId, documentKey, signatureBuffer)
-    if (!result.success) {
-      return NextResponse.json(
-        { error: result.error ?? 'PDF 생성에 실패했습니다.' },
-        { status: 500 }
-      )
-    }
-
-    // Generate preview image
     let previewUrl: string | undefined
-    try {
-      const previewPath = await generatePreviewImage(employeeId, documentKey)
-      previewUrl = await previewToBase64(previewPath)
-    } catch (previewErr) {
-      // Preview generation failure is non-fatal
-      log.error({ err: previewErr }, `Preview generation failed for ${documentKey}`)
+    let previewType: 'png' | 'pdf' | undefined
+
+    if (USE_SHEETS) {
+      // --- Sheets-based pipeline ---
+      const empResult = await getEmployeeById(employeeId)
+      if (!empResult) {
+        return NextResponse.json(
+          { error: '직원 정보를 찾을 수 없습니다.' },
+          { status: 404 }
+        )
+      }
+
+      const { employee } = empResult
+      const variables = buildBaseVariables(employee)
+
+      // Labor contract: add individual conditions + select template by pay_sec
+      if (documentKey === 'labor_contract') {
+        const conditions = await getContractConditions(employeeId)
+        if (conditions) {
+          Object.assign(variables, buildContractVariables(conditions))
+        }
+      }
+
+      // Generate PDF from Sheets template (pay_sec selects monthly/daily)
+      const pdfBuffer = await generatePdfFromTemplate(
+        documentKey,
+        variables,
+        employee.pay_sec
+      )
+
+      // Embed signature image into the PDF
+      const pdfDoc = await PDFDocument.load(pdfBuffer)
+      const pages = pdfDoc.getPages()
+      const config = getSignaturePositionConfig()
+      const posKey = documentKey === 'labor_contract'
+        ? `labor_contract_${employee.pay_sec}` as const
+        : documentKey
+      const position = config[posKey] ?? config[documentKey]
+
+      // Support single position or array of positions
+      const positions = Array.isArray(position) ? position : position ? [position] : []
+      if (positions.length > 0) {
+        const sigImage = await pdfDoc.embedPng(signatureBuffer)
+        for (const pos of positions) {
+          if (pos.page < pages.length) {
+            pages[pos.page].drawImage(sigImage, {
+              x: pos.x,
+              y: pos.y,
+              width: pos.width,
+              height: pos.height,
+            })
+          }
+        }
+      }
+
+      const signedPdfBytes = await pdfDoc.save()
+
+      // Save to temp storage
+      ensureSessionDir(employeeId)
+      const outputPath = getPdfPath(employeeId, documentKey)
+      fs.writeFileSync(outputPath, signedPdfBytes)
+
+      // Generate preview
+      try {
+        const preview = await generatePreviewWithFallback(employeeId, documentKey)
+        previewUrl = preview.dataUrl
+        previewType = preview.type
+      } catch (previewErr) {
+        log.error({ err: previewErr }, `Preview generation failed for ${documentKey}`)
+      }
+    } else {
+      // --- Legacy PDF template pipeline ---
+      const result = await generateSignedPdf(employeeId, documentKey, signatureBuffer)
+      if (!result.success) {
+        return NextResponse.json(
+          { error: result.error ?? 'PDF 생성에 실패했습니다.' },
+          { status: 500 }
+        )
+      }
+
+      try {
+        const preview = await generatePreviewWithFallback(employeeId, documentKey)
+        previewUrl = preview.dataUrl
+        previewType = preview.type
+      } catch (previewErr) {
+        log.error({ err: previewErr }, `Preview generation failed for ${documentKey}`)
+      }
     }
 
     // Update Google Sheets status
@@ -64,6 +144,7 @@ export async function POST(request: NextRequest) {
       success: true,
       status: DOC_STATUS.SIGNED,
       previewUrl,
+      previewType,
     })
   } catch (err) {
     log.error({ err }, '서류 동의 처리 중 오류가 발생했습니다.')

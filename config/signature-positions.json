@@ -1,52 +1,134 @@
 {
-  "_comment": "Signature positions in PDF points (1pt = 1/72 inch). Y-axis origin is at the BOTTOM of the page (pdf-lib coordinate system). A4 height = 841.89pt. These coordinates are placeholder values and must be tuned against actual PDF template files.",
-  "labor_contract": {
-    "page": 2,
-    "x": 350,
-    "y": 80,
-    "width": 180,
-    "height": 60
-  },
+  "_comment": "Signature positions in PDF points. Y-axis origin is BOTTOM of page (pdf-lib). A4=841.89pt. labor_contract is kept as fallback; monthly/daily have separate entries.",
+  "labor_contract": [
+    {
+      "page": 0,
+      "x": 161,
+      "y": 353,
+      "width": 35,
+      "height": 11
+    },
+    {
+      "page": 1,
+      "x": 332,
+      "y": 765,
+      "width": 35,
+      "height": 11
+    },
+    {
+      "page": 1,
+      "x": 387,
+      "y": 557,
+      "width": 35,
+      "height": 11
+    },
+    {
+      "page": 1,
+      "x": 525,
+      "y": 423,
+      "width": 35,
+      "height": 11
+    }
+  ],
+  "labor_contract_monthly": [
+    {
+      "page": 0,
+      "x": 161,
+      "y": 353,
+      "width": 35,
+      "height": 11
+    },
+    {
+      "page": 1,
+      "x": 332,
+      "y": 765,
+      "width": 35,
+      "height": 11
+    },
+    {
+      "page": 1,
+      "x": 387,
+      "y": 557,
+      "width": 35,
+      "height": 11
+    },
+    {
+      "page": 1,
+      "x": 525,
+      "y": 423,
+      "width": 35,
+      "height": 11
+    }
+  ],
+  "labor_contract_daily": [
+    {
+      "page": 0,
+      "x": 334,
+      "y": 75,
+      "width": 34,
+      "height": 11
+    },
+    {
+      "page": 1,
+      "x": 388,
+      "y": 668,
+      "width": 34,
+      "height": 11
+    },
+    {
+      "page": 1,
+      "x": 526,
+      "y": 534,
+      "width": 34,
+      "height": 11
+    }
+  ],
   "personal_info_consent": {
     "page": 0,
-    "x": 380,
-    "y": 60,
-    "width": 160,
-    "height": 50
+    "x": 88,
+    "y": 605,
+    "width": 45,
+    "height": 15,
+    "sheets_row": 13
   },
   "bank_account": {
     "page": 0,
-    "x": 360,
-    "y": 70,
-    "width": 160,
-    "height": 50
+    "x": 88,
+    "y": 605,
+    "width": 45,
+    "height": 15,
+    "sheets_row": 13
   },
   "health_certificate": {
     "page": 0,
-    "x": 380,
-    "y": 55,
-    "width": 160,
-    "height": 50
+    "x": 88,
+    "y": 637,
+    "width": 45,
+    "height": 15,
+    "sheets_row": 11
   },
   "criminal_check_consent": {
     "page": 0,
-    "x": 370,
-    "y": 65,
-    "width": 160,
-    "height": 50
+    "x": 88,
+    "y": 637,
+    "width": 45,
+    "height": 15,
+    "sheets_row": 11
   },
   "emergency_contact": {
     "page": 0,
-    "x": 360,
-    "y": 60,
-    "width": 160,
-    "height": 50
+    "x": 88,
+    "y": 574,
+    "width": 45,
+    "height": 15,
+    "sheets_row": 15
   },
   "data_security_pledge": {
-    "page": 1,
-    "x": 350,
-    "y": 75,
-    "width": 180,
-    "height": 60
+    "page": 0,
+    "x": 88,
+    "y": 605,
+    "width": 45,
+    "height": 15,
+    "sheets_row": 13
   }
 }
