@@ -23,6 +23,16 @@ export const DOCUMENT_LABELS: Record<DocumentKey, string> = {
   data_security_pledge: '정보보안 서약서',
 }
 
+export const DOCUMENT_DESCRIPTIONS: Record<DocumentKey, string> = {
+  labor_contract: '근로 조건, 급여, 복리후생 등을 포함한 고용 계약서입니다.',
+  personal_info_consent: '인사·급여 관리를 위한 개인정보 수집 및 이용 동의서입니다.',
+  bank_account: '급여 이체를 위한 본인 명의 계좌 정보를 등록합니다.',
+  health_certificate: '입사 전 건강검진 결과서 제출을 확인하는 서류입니다.',
+  criminal_check_consent: '채용 절차에 필요한 범죄경력 조회 동의서입니다.',
+  emergency_contact: '비상 시 연락 가능한 보호자 정보를 등록합니다.',
+  data_security_pledge: '업무상 취득한 정보의 보안 유지를 서약하는 문서입니다.',
+}
+
 export const PDF_FILENAME_SUFFIXES: Record<DocumentKey, string> = {
   labor_contract: '근로계약서',
   personal_info_consent: '개인정보동의',
@@ -56,6 +66,8 @@ export interface ConsentRecord {
   consentedAt: string // ISO 8601 timestamp
   pdfTempPath?: string
 }
+
+export type TemplateSource = 'pdf' | 'sheets'
 
 export interface DocumentListItem {
   key: DocumentKey

@@ -82,6 +82,29 @@ export interface CleanupResponse {
   deletedCount: number
 }
 
+// GET /api/docs/preview
+export interface DocPreviewRequest {
+  documentKey: DocumentKey
+}
+export interface DocPreviewResponse {
+  success: boolean
+  pdfBase64?: string
+  error?: string
+}
+
+// GET /api/employee/materials
+export interface OnboardingMaterial {
+  material_id: string
+  title: string
+  description: string
+  file_url: string
+  category: string
+  order: number
+}
+export interface MaterialsResponse {
+  materials: OnboardingMaterial[]
+}
+
 // Generic API error response
 export interface ApiError {
   error: string

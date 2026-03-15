@@ -34,6 +34,8 @@ export const SPREADSHEET_ID = (): string => {
 export const SHEET_NAMES = {
   EMPLOYEE_MASTER: process.env.SHEET_EMPLOYEE_MASTER ?? 'EMPLOYEE_MASTER',
   DOCUMENT_STATUS: process.env.SHEET_DOCUMENT_STATUS ?? 'DOCUMENT_STATUS',
+  EMPLOYEE_CONTRACT: 'EMPLOYEE_CONTRACT',
+  ONBOARDING_MATERIALS: 'ONBOARDING_MATERIALS',
 } as const
 
 // Retry helper with exponential backoff for Sheets API calls

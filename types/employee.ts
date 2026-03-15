@@ -5,14 +5,19 @@ export const SESSION_STATUS = {
 } as const
 export type SessionStatus = typeof SESSION_STATUS[keyof typeof SESSION_STATUS]
 
+export type PaySection = 'monthly' | 'daily'
+
 export interface EmployeeMasterRow {
   employee_id: string
   name: string
+  address: string
+  birthday: string
   phone: string
   email: string
   hire_date: string
   department: string
   position: string
+  pay_sec: PaySection
   session_status: SessionStatus
   onboarding_link: string
 }

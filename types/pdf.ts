@@ -8,7 +8,10 @@ export interface SignaturePosition {
   height: number // Signature image height in PDF points
 }
 
-export type SignaturePositionConfig = Record<DocumentKey, SignaturePosition>
+// Includes base DocumentKey entries plus labor_contract_monthly / _daily variants
+export type SignaturePositionKey = DocumentKey | 'labor_contract_monthly' | 'labor_contract_daily'
+// Each document can have one or multiple signature positions
+export type SignaturePositionConfig = Record<SignaturePositionKey, SignaturePosition | SignaturePosition[]>
 
 export interface PdfGenerationResult {
   documentKey: DocumentKey
