@@ -38,3 +38,11 @@ next-env.d.ts
 
 # Temp files
 /tmp/
+
+# Calibration output (local only)
+scripts/calibration-output/
+
+# Debug images/PDFs (root level)
+/*.png
+/*.pdf
+test_pdf_export.mjs

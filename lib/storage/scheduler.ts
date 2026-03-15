@@ -1,4 +1,7 @@
 import { listAllSessionIds, getSessionDirMtime, deleteSessionDir } from './temp-files'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('[scheduler]')
 
 const SESSION_TIMEOUT_MS = 30 * 60 * 1000 // 30 minutes
 const SCAN_INTERVAL_MS = 5 * 60 * 1000    // scan every 5 minutes
@@ -17,8 +20,7 @@ export function cleanupExpiredSessions(): number {
         deleteSessionDir(sessionId)
         deletedCount++
       } catch {
-        // Non-fatal: log without PII
-        console.error(`[scheduler] Failed to delete session dir: ${sessionId.slice(0, 8)}...`)
+        log.error(`Failed to delete session dir: ${sessionId.slice(0, 8)}...`)
       }
     }
   }
@@ -33,9 +35,9 @@ export function startScheduler(): void {
   setInterval(() => {
     const deleted = cleanupExpiredSessions()
     if (deleted > 0) {
-      console.log(`[scheduler] Cleaned up ${deleted} expired session(s)`)
+      log.info(`Cleaned up ${deleted} expired session(s)`)
     }
   }, SCAN_INTERVAL_MS)
 
-  console.log('[scheduler] Session cleanup scheduler started (interval: 5min, timeout: 30min)')
+  log.info('Session cleanup scheduler started (interval: 5min, timeout: 30min)')
 }
