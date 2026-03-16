@@ -46,3 +46,7 @@ scripts/calibration-output/
 /*.png
 /*.pdf
 test_pdf_export.mjs
+
+# Local tool configs
+.claude/
+.playwright-mcp/
