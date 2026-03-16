@@ -35,28 +35,31 @@ export async function generateSignedPdf(
     const pages = pdfDoc.getPages()
 
     const config = getSignaturePositionConfig()
-    const position = config[documentKey]
+    const positionData = config[documentKey]
+    const positions = Array.isArray(positionData) ? positionData : [positionData]
 
-    if (position.page >= pages.length) {
-      return {
-        documentKey,
-        tempFilePath: '',
-        previewImagePath: '',
-        fileSizeBytes: 0,
-        success: false,
-        error: `Page index ${position.page} out of range (document has ${pages.length} pages)`,
-      }
-    }
-
-    const targetPage = pages[position.page]
     const sigImage = await pdfDoc.embedPng(signatureBuffer)
 
-    targetPage.drawImage(sigImage, {
-      x: position.x,
-      y: position.y,
-      width: position.width,
-      height: position.height,
-    })
+    for (const position of positions) {
+      if (position.page >= pages.length) {
+        return {
+          documentKey,
+          tempFilePath: '',
+          previewImagePath: '',
+          fileSizeBytes: 0,
+          success: false,
+          error: `Page index ${position.page} out of range (document has ${pages.length} pages)`,
+        }
+      }
+
+      const targetPage = pages[position.page]
+      targetPage.drawImage(sigImage, {
+        x: position.x,
+        y: position.y,
+        width: position.width,
+        height: position.height,
+      })
+    }
 
     const pdfBytes = await pdfDoc.save()
     ensureSessionDir(employeeId)

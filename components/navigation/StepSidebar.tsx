@@ -4,11 +4,12 @@ import { usePathname } from 'next/navigation'
 
 const STEPS = [
   { label: '본인 확인', path: '/login', step: 1 },
-  { label: '전자서명', path: '/onboarding/signature', step: 2 },
-  { label: '서류 작성', path: '/onboarding/documents', step: 3 },
-  { label: '최종 확인', path: '/onboarding/preview', step: 4 },
-  { label: '사번 확인', path: '/onboarding/employee-id', step: 5 },
-  { label: '완료', path: '/onboarding/complete', step: 6 },
+  { label: '개인정보 동의', path: '/onboarding/privacy-consent', step: 2 },
+  { label: '전자서명', path: '/onboarding/signature', step: 3 },
+  { label: '서류 작성', path: '/onboarding/documents', step: 4 },
+  { label: '최종 확인', path: '/onboarding/preview', step: 5 },
+  { label: '사번 확인', path: '/onboarding/employee-id', step: 6 },
+  { label: '완료', path: '/onboarding/complete', step: 7 },
 ]
 
 function getCurrentStep(pathname: string): number {

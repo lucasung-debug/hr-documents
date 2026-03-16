@@ -19,9 +19,13 @@ export default function DocumentsPage() {
       const res = await fetch('/api/docs/list')
       if (!res.ok) throw new Error('서류 목록 조회 실패')
       const data = await res.json()
-      setDocs(data.docs)
+      // Filter out personal_info_consent (handled in privacy-consent step)
+      const filteredDocs = data.docs.filter(
+        (d: DocListItem) => d.key !== 'personal_info_consent'
+      )
+      setDocs(filteredDocs)
 
-      const completed = data.docs.every((d: DocListItem) => d.status !== 'pending')
+      const completed = filteredDocs.every((d: DocListItem) => d.status !== 'pending')
       setAllCompleted(completed)
     } catch {
       setError('서류 목록을 불러오는 중 오류가 발생했습니다.')
