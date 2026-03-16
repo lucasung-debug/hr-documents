@@ -5,9 +5,10 @@ import { SESSION_STATUS } from '@/types/employee'
 import {
   findDocStatusByEmployeeId,
   initDocStatusRow,
+  resetDocStatuses,
 } from '@/lib/sheets/document-status'
 import { signJwt } from '@/lib/auth/jwt'
-import { ensureSessionDir } from '@/lib/storage/temp-files'
+import { ensureSessionDir, deleteSessionDir } from '@/lib/storage/temp-files'
 import { createLogger } from '@/lib/logger'
 import { ERROR_CODES } from '@/lib/errors'
 import { apiOk, apiError, apiFromUnknown } from '@/lib/api'
@@ -50,13 +51,17 @@ export async function POST(request: NextRequest) {
     // Update session status to IN_PROGRESS
     await updateSessionStatus(rowIndex, SESSION_STATUS.IN_PROGRESS)
 
-    // Ensure document status row exists
+    // Ensure document status row exists, reset if re-login
     const existingStatus = await findDocStatusByEmployeeId(employee.employee_id)
     if (!existingStatus) {
       await initDocStatusRow(employee.employee_id, employee.name, employee.phone)
+    } else {
+      log.info({ employeeId: employee.employee_id }, 'Resetting document statuses for re-login')
+      await resetDocStatuses(existingStatus.rowIndex)
     }
 
-    // Create temp session directory
+    // Clean previous session files and create fresh directory
+    deleteSessionDir(employee.employee_id)
     ensureSessionDir(employee.employee_id)
 
     // Issue JWT (30 min expiry, set by signJwt)

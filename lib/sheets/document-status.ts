@@ -4,18 +4,17 @@ import type { DocumentKey, DocumentStatus } from '@/types/document'
 import type { DocumentStatusRow } from '@/types/employee'
 
 // Column order: A:employee_id, B:name, C:phone,
-// D:labor_contract, E:personal_info_consent, F:bank_account,
-// G:health_certificate, H:criminal_check_consent, I:emergency_contact,
-// J:data_security_pledge, K:all_completed_at, L:email_sent_at, M:sign_hash
+// D:labor_contract, E:personal_info_consent, F:holiday_extension,
+// G:data_security_pledge, H:compliance, I:overtime_work,
+// J:all_completed_at, K:email_sent_at, L:sign_hash
 
 const DOC_COLUMN_MAP: Record<DocumentKey, string> = {
   labor_contract: 'D',
   personal_info_consent: 'E',
-  bank_account: 'F',
-  health_certificate: 'G',
-  criminal_check_consent: 'H',
-  emergency_contact: 'I',
-  data_security_pledge: 'J',
+  holiday_extension: 'F',
+  data_security_pledge: 'G',
+  compliance: 'H',
+  overtime_work: 'I',
 }
 
 function rowToDocStatus(row: string[]): DocumentStatusRow {
@@ -25,14 +24,13 @@ function rowToDocStatus(row: string[]): DocumentStatusRow {
     phone: row[2] ?? '',
     labor_contract: row[3] ?? '미완료',
     personal_info_consent: row[4] ?? '미완료',
-    bank_account: row[5] ?? '미완료',
-    health_certificate: row[6] ?? '미완료',
-    criminal_check_consent: row[7] ?? '미완료',
-    emergency_contact: row[8] ?? '미완료',
-    data_security_pledge: row[9] ?? '미완료',
-    all_completed_at: row[10] ?? '',
-    email_sent_at: row[11] ?? '',
-    sign_hash: row[12] ?? '',
+    holiday_extension: row[5] ?? '미완료',
+    data_security_pledge: row[6] ?? '미완료',
+    compliance: row[7] ?? '미완료',
+    overtime_work: row[8] ?? '미완료',
+    all_completed_at: row[9] ?? '',
+    email_sent_at: row[10] ?? '',
+    sign_hash: row[11] ?? '',
   }
 }
 
@@ -43,7 +41,7 @@ export async function findDocStatusByEmployeeId(
   const response = await withRetry(() =>
     sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID(),
-      range: `${SHEET_NAMES.DOCUMENT_STATUS}!A2:M`,
+      range: `${SHEET_NAMES.DOCUMENT_STATUS}!A2:L`,
     })
   )
 
@@ -67,13 +65,13 @@ export async function initDocStatusRow(
     employeeId,
     name,
     phone,
-    '미완료', '미완료', '미완료', '미완료', '미완료', '미완료', '미완료',
+    '미완료', '미완료', '미완료', '미완료', '미완료', '미완료',
     '', '', '',
   ]
   await withRetry(() =>
     sheets.spreadsheets.values.append({
       spreadsheetId: SPREADSHEET_ID(),
-      range: `${SHEET_NAMES.DOCUMENT_STATUS}!A:M`,
+      range: `${SHEET_NAMES.DOCUMENT_STATUS}!A:L`,
       valueInputOption: 'RAW',
       requestBody: { values: [initialRow] },
     })
@@ -121,7 +119,7 @@ export async function markAllCompleted(rowIndex: number): Promise<void> {
   await withRetry(() =>
     sheets.spreadsheets.values.update({
       spreadsheetId: SPREADSHEET_ID(),
-      range: `${SHEET_NAMES.DOCUMENT_STATUS}!K${rowIndex}`,
+      range: `${SHEET_NAMES.DOCUMENT_STATUS}!J${rowIndex}`,
       valueInputOption: 'RAW',
       requestBody: { values: [[now]] },
     })
@@ -137,9 +135,23 @@ export async function markEmailSent(
   await withRetry(() =>
     sheets.spreadsheets.values.update({
       spreadsheetId: SPREADSHEET_ID(),
-      range: `${SHEET_NAMES.DOCUMENT_STATUS}!L${rowIndex}:M${rowIndex}`,
+      range: `${SHEET_NAMES.DOCUMENT_STATUS}!K${rowIndex}:L${rowIndex}`,
       valueInputOption: 'RAW',
       requestBody: { values: [[now, signHash]] },
+    })
+  )
+}
+
+export async function resetDocStatuses(rowIndex: number): Promise<void> {
+  const sheets = getSheetsClient()
+  await withRetry(() =>
+    sheets.spreadsheets.values.update({
+      spreadsheetId: SPREADSHEET_ID(),
+      range: `${SHEET_NAMES.DOCUMENT_STATUS}!D${rowIndex}:L${rowIndex}`,
+      valueInputOption: 'RAW',
+      requestBody: {
+        values: [['미완료', '미완료', '미완료', '미완료', '미완료', '미완료', '', '', '']],
+      },
     })
   )
 }
@@ -149,7 +161,7 @@ export async function setEmailSentinel(rowIndex: number): Promise<void> {
   await withRetry(() =>
     sheets.spreadsheets.values.update({
       spreadsheetId: SPREADSHEET_ID(),
-      range: `${SHEET_NAMES.DOCUMENT_STATUS}!L${rowIndex}`,
+      range: `${SHEET_NAMES.DOCUMENT_STATUS}!K${rowIndex}`,
       valueInputOption: 'RAW',
       requestBody: { values: [['sending']] },
     })

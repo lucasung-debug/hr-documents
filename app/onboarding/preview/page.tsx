@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { DOCUMENT_KEYS, DOCUMENT_LABELS } from '@/types/document'
 import type { DocumentKey } from '@/types/document'
 import { Button } from '@/components/ui/Button'
+import { apiFetch } from '@/lib/api/client-fetch'
 
 interface PreviewItem {
   key: DocumentKey
@@ -31,7 +32,7 @@ export default function PreviewPage() {
     const fetchPreviews = async () => {
       for (const key of DOCUMENT_KEYS) {
         try {
-          const res = await fetch('/api/docs/generate-pdf', {
+          const res = await apiFetch('/api/docs/generate-pdf', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ documentKey: key }),

@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { DocumentList } from '@/components/documents/DocumentList'
 import { Button } from '@/components/ui/Button'
+import { apiFetch } from '@/lib/api/client-fetch'
 import type { DocListItem } from '@/types/api'
 
 export default function DocumentsPage() {
@@ -16,7 +17,7 @@ export default function DocumentsPage() {
 
   const fetchDocs = useCallback(async () => {
     try {
-      const res = await fetch('/api/docs/list')
+      const res = await apiFetch('/api/docs/list')
       if (!res.ok) throw new Error('서류 목록 조회 실패')
       const data = await res.json()
       // Filter out personal_info_consent (handled in privacy-consent step)
@@ -39,7 +40,7 @@ export default function DocumentsPage() {
   }, [fetchDocs])
 
   const handleConsent = async (key: string) => {
-    const res = await fetch('/api/docs/consent', {
+    const res = await apiFetch('/api/docs/consent', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ documentKey: key }),
@@ -54,7 +55,7 @@ export default function DocumentsPage() {
   const handleCheckAll = async () => {
     setCheckingAll(true)
     try {
-      const res = await fetch('/api/docs/check-all')
+      const res = await apiFetch('/api/docs/check-all')
       const data = await res.json()
       if (data.allCompleted) {
         router.push('/onboarding/preview')
@@ -76,7 +77,7 @@ export default function DocumentsPage() {
           <div className="h-4 w-72 bg-apple-gray-100 rounded-apple animate-pulse mt-2" />
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-5">
-          {Array.from({ length: 7 }).map((_, i) => (
+          {Array.from({ length: 5 }).map((_, i) => (
             <div key={i} className="rounded-apple-lg border border-apple-gray-100 p-5 shadow-apple-sm">
               <div className="flex items-center justify-between mb-3">
                 <div className="h-5 w-32 bg-apple-gray-100 rounded animate-pulse" />

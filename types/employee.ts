@@ -28,11 +28,10 @@ export interface DocumentStatusRow {
   phone: string
   labor_contract: string
   personal_info_consent: string
-  bank_account: string
-  health_certificate: string
-  criminal_check_consent: string
-  emergency_contact: string
+  holiday_extension: string
   data_security_pledge: string
+  compliance: string
+  overtime_work: string
   all_completed_at: string
   email_sent_at: string
   sign_hash: string

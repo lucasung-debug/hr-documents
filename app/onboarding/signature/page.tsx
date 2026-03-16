@@ -6,6 +6,7 @@ import { SignaturePad } from '@/components/signature/SignaturePad'
 import { SignaturePreview } from '@/components/signature/SignaturePreview'
 import { useSession } from '@/components/providers/SessionProvider'
 import { Button } from '@/components/ui/Button'
+import { apiFetch } from '@/lib/api/client-fetch'
 
 export default function SignaturePage() {
   const router = useRouter()
@@ -31,7 +32,7 @@ export default function SignaturePage() {
     setError('')
 
     try {
-      const res = await fetch('/api/sign/capture', {
+      const res = await apiFetch('/api/sign/capture', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ signatureBase64: capturedDataUrl }),

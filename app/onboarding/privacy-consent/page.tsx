@@ -1,69 +1,40 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { Accordion } from '@/components/ui/Accordion'
 import { Checkbox } from '@/components/ui/Checkbox'
 import { Button } from '@/components/ui/Button'
+import { apiFetch } from '@/lib/api/client-fetch'
 import { useSession } from '@/components/providers/SessionProvider'
-
-interface ConsentItem {
-  id: string
-  label: string
-  checked: boolean
-}
+import {
+  PRIVACY_CONSENT_INTRO,
+  PRIVACY_CONSENT_SECTIONS,
+  PRIVACY_CONSENT_FOOTER,
+} from '@/config/privacy-consent'
 
 export default function PrivacyConsentPage() {
   const router = useRouter()
   const { employeeName } = useSession()
 
-  const [pdfBase64, setPdfBase64] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
 
-  const [consentItems, setConsentItems] = useState<ConsentItem[]>([
-    { id: 'collection', label: '개인정보 수집 목적 동의', checked: false },
-    { id: 'items', label: '수집 항목 확인', checked: false },
-    { id: 'retention', label: '보유·이용 기간 동의', checked: false },
-    { id: 'third_party', label: '제3자 제공 동의', checked: false },
-    { id: 'sensitive', label: '민감정보 처리 동의', checked: false },
-  ])
+  // 각 섹션별 동의 상태
+  const [checkedMap, setCheckedMap] = useState<Record<string, boolean>>(
+    () => Object.fromEntries(PRIVACY_CONSENT_SECTIONS.map((s) => [s.id, false]))
+  )
 
-  const allChecked = consentItems.every((item) => item.checked)
-  const anyChecked = consentItems.some((item) => item.checked)
+  const allChecked = PRIVACY_CONSENT_SECTIONS.every((s) => checkedMap[s.id])
 
-  // Load preview PDF
-  useEffect(() => {
-    const fetchPreview = async () => {
-      try {
-        const res = await fetch('/api/docs/preview?documentKey=personal_info_consent')
-        if (!res.ok) {
-          throw new Error('미리보기 조회 실패')
-        }
-        const data = await res.json()
-        setPdfBase64(data.pdfBase64)
-      } catch (err) {
-        setError('개인정보 동의서를 불러오는 중 오류가 발생했습니다.')
-        console.error(err)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchPreview()
-  }, [])
-
-  const handleToggleItem = (id: string) => {
-    setConsentItems((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, checked: !item.checked } : item
-      )
-    )
+  const handleToggle = (id: string, checked: boolean) => {
+    setCheckedMap((prev) => ({ ...prev, [id]: checked }))
   }
 
   const handleToggleAll = () => {
-    setConsentItems((prev) =>
-      prev.map((item) => ({ ...item, checked: !allChecked }))
+    const next = !allChecked
+    setCheckedMap(
+      Object.fromEntries(PRIVACY_CONSENT_SECTIONS.map((s) => [s.id, next]))
     )
   }
 
@@ -77,7 +48,7 @@ export default function PrivacyConsentPage() {
     setError('')
 
     try {
-      const res = await fetch('/api/docs/consent', {
+      const res = await apiFetch('/api/docs/consent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ documentKey: 'personal_info_consent' }),
@@ -90,9 +61,8 @@ export default function PrivacyConsentPage() {
       }
 
       router.push('/onboarding/signature')
-    } catch (err) {
+    } catch {
       setError('네트워크 오류가 발생했습니다.')
-      console.error(err)
     } finally {
       setSubmitting(false)
     }
@@ -100,6 +70,7 @@ export default function PrivacyConsentPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      {/* Header */}
       <div>
         <h2 className="text-[24px] font-bold text-apple-gray-900 tracking-[-0.01em]">
           개인정보 수집·이용 동의
@@ -111,59 +82,71 @@ export default function PrivacyConsentPage() {
         )}
       </div>
 
-      {/* PDF Preview Area */}
-      {loading ? (
-        <div className="bg-apple-gray-100 rounded-apple-lg h-96 flex items-center justify-center">
-          <p className="text-apple-gray-500">문서를 로드 중입니다...</p>
-        </div>
-      ) : error && !pdfBase64 ? (
-        <div className="bg-red-50 border border-red-200 rounded-apple-lg p-4">
-          <p className="text-red-700 text-sm">{error}</p>
-        </div>
-      ) : pdfBase64 ? (
-        <div className="bg-white border border-apple-gray-200 rounded-apple-lg overflow-hidden">
-          <div className="h-96 overflow-auto bg-apple-gray-50 flex items-center justify-center">
-            <embed
-              src={`data:application/pdf;base64,${pdfBase64}`}
-              type="application/pdf"
-              className="w-full h-full"
-            />
-          </div>
-        </div>
-      ) : null}
-
-      {/* Consent Checkboxes */}
-      <div className="space-y-3">
-        <div className="bg-apple-blue-light rounded-apple-lg p-4 border border-apple-blue-200">
-          <Checkbox
-            label="전체 동의"
-            checked={allChecked}
-            onChange={handleToggleAll}
-            id="consent-all"
-            className="text-[15px] font-semibold text-apple-gray-900"
-          />
-        </div>
-
-        <div className="space-y-2 pl-1">
-          {consentItems.map((item) => (
-            <Checkbox
-              key={item.id}
-              label={item.label}
-              checked={item.checked}
-              onChange={() => handleToggleItem(item.id)}
-              id={`consent-${item.id}`}
-              className="p-2 rounded-apple hover:bg-apple-gray-50 transition-colors"
-            />
-          ))}
-        </div>
+      {/* Intro */}
+      <div className="bg-apple-gray-50 rounded-apple-lg p-4 text-sm text-apple-gray-700 leading-relaxed">
+        {PRIVACY_CONSENT_INTRO}
       </div>
 
+      {/* Toggle All */}
+      <div className="bg-apple-blue-light rounded-apple-lg p-4 border border-apple-blue-200">
+        <Checkbox
+          label="전체 동의"
+          checked={allChecked}
+          onChange={handleToggleAll}
+          id="consent-all"
+          className="text-[15px] font-semibold text-apple-gray-900"
+        />
+      </div>
+
+      {/* Consent Sections */}
+      <div className="space-y-3">
+        {PRIVACY_CONSENT_SECTIONS.map((section) => (
+          <Accordion
+            key={section.id}
+            title={section.title}
+            checked={checkedMap[section.id]}
+            onCheck={(checked) => handleToggle(section.id, checked)}
+            checkboxId={`consent-${section.id}`}
+          >
+            {section.description && (
+              <p className="mb-3 text-apple-gray-600">{section.description}</p>
+            )}
+
+            <table className="w-full border-collapse mb-3">
+              <tbody>
+                {section.table.map((row, i) => (
+                  <tr key={i} className="border border-apple-gray-200">
+                    <td className="bg-apple-gray-50 px-3 py-2 font-medium text-apple-gray-800 w-[140px] align-top whitespace-nowrap">
+                      {row.label}
+                    </td>
+                    <td className="px-3 py-2 text-apple-gray-700 whitespace-pre-line">
+                      {row.value}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            <p className="text-xs text-apple-gray-500 bg-apple-gray-50 rounded-apple px-3 py-2">
+              {section.refusalNotice}
+            </p>
+          </Accordion>
+        ))}
+      </div>
+
+      {/* Footer */}
+      <div className="bg-apple-gray-50 rounded-apple-lg p-4 text-xs text-apple-gray-500 leading-relaxed">
+        {PRIVACY_CONSENT_FOOTER}
+      </div>
+
+      {/* Error */}
       {error && (
         <p className="text-sm text-red-600 bg-red-50 rounded-apple px-4 py-3">
           {error}
         </p>
       )}
 
+      {/* Submit */}
       <Button
         onClick={handleSubmit}
         disabled={!allChecked || submitting}

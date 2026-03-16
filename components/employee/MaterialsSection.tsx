@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { apiFetch } from '@/lib/api/client-fetch'
 import type { OnboardingMaterial } from '@/types/api'
 
 export function MaterialsSection() {
@@ -11,7 +12,7 @@ export function MaterialsSection() {
   useEffect(() => {
     const fetchMaterials = async () => {
       try {
-        const res = await fetch('/api/employee/materials')
+        const res = await apiFetch('/api/employee/materials')
         if (!res.ok) throw new Error('자료 조회 실패')
         const data = await res.json()
         setMaterials(data.materials ?? [])

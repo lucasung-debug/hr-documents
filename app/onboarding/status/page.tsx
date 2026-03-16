@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
+import { apiFetch } from '@/lib/api/client-fetch'
 import { DOCUMENT_LABELS } from '@/types/document'
 import type { DocumentKey } from '@/types/document'
 
@@ -15,7 +16,7 @@ export default function StatusPage() {
   useEffect(() => {
     const checkStatus = async () => {
       try {
-        const res = await fetch('/api/docs/check-all')
+        const res = await apiFetch('/api/docs/check-all')
         const data = await res.json()
         setAllCompleted(data.allCompleted)
         setPending(data.pending ?? [])

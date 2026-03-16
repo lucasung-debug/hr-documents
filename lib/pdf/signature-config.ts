@@ -10,11 +10,10 @@ const REQUIRED_KEYS: SignaturePositionKey[] = [
   'labor_contract_monthly',
   'labor_contract_daily',
   'personal_info_consent',
-  'bank_account',
-  'health_certificate',
-  'criminal_check_consent',
-  'emergency_contact',
+  'holiday_extension',
   'data_security_pledge',
+  'compliance',
+  'overtime_work',
 ]
 
 export function getSignaturePositionConfig(): SignaturePositionConfig {

@@ -5,6 +5,7 @@ import type { DocumentListItem } from '@/types/document'
 import { DOCUMENT_DESCRIPTIONS, DOCUMENT_LABELS } from '@/types/document'
 import { Button } from '@/components/ui/Button'
 import { Checkbox } from '@/components/ui/Checkbox'
+import { apiFetch } from '@/lib/api/client-fetch'
 import { DocumentPreviewModal } from './DocumentPreviewModal'
 
 interface DocumentCardProps {
@@ -39,7 +40,7 @@ export function DocumentCard({ doc, onConsent }: DocumentCardProps) {
     setPreviewPdf(null)
 
     try {
-      const res = await fetch(`/api/docs/preview?documentKey=${doc.key}`)
+      const res = await apiFetch(`/api/docs/preview?documentKey=${doc.key}`)
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
         throw new Error(data.error ?? '미리보기를 불러올 수 없습니다.')

@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { docConsentSchema } from '@/lib/validators/input'
 import { readSignature, ensureSessionDir, getPdfPath } from '@/lib/storage/temp-files'
 import { generateSignedPdf } from '@/lib/pdf/generator'
-import { generatePreviewWithFallback } from '@/lib/pdf/puppeteer'
 import { generatePdfFromTemplate } from '@/lib/sheets/template'
 import { getContractConditions } from '@/lib/sheets/contract'
 import { buildBaseVariables, buildContractVariables } from '@/lib/sheets/template-variables'
@@ -20,7 +19,7 @@ import { apiFromUnknown } from '@/lib/api'
 
 const log = createLogger('[docs/consent]')
 
-const USE_SHEETS = process.env.USE_SHEETS_TEMPLATES === 'true'
+const USE_SHEETS = process.env.USE_SHEETS_TEMPLATES !== 'false'
 
 export async function POST(request: NextRequest) {
   const employeeId = request.headers.get('x-employee-id')
@@ -57,12 +56,16 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    let previewUrl: string | undefined
-    let previewType: 'png' | 'pdf' | undefined
-
     if (USE_SHEETS) {
       // --- Sheets-based pipeline ---
-      const empResult = await getEmployeeById(employeeId)
+      // Parallel fetch: employee info + contract conditions (if labor_contract)
+      const [empResult, conditions] = await Promise.all([
+        getEmployeeById(employeeId),
+        documentKey === 'labor_contract'
+          ? getContractConditions(employeeId)
+          : Promise.resolve(null),
+      ])
+
       if (!empResult) {
         return NextResponse.json(
           { error: '직원 정보를 찾을 수 없습니다.' },
@@ -73,12 +76,8 @@ export async function POST(request: NextRequest) {
       const { employee } = empResult
       const variables = buildBaseVariables(employee)
 
-      // Labor contract: add individual conditions + select template by pay_sec
-      if (documentKey === 'labor_contract') {
-        const conditions = await getContractConditions(employeeId)
-        if (conditions) {
-          Object.assign(variables, buildContractVariables(conditions))
-        }
+      if (documentKey === 'labor_contract' && conditions) {
+        Object.assign(variables, buildContractVariables(conditions))
       }
 
       // Generate PDF from Sheets template (pay_sec selects monthly/daily)
@@ -122,15 +121,6 @@ export async function POST(request: NextRequest) {
       ensureSessionDir(employeeId)
       const outputPath = getPdfPath(employeeId, documentKey)
       fs.writeFileSync(outputPath, signedPdfBytes)
-
-      // Generate preview
-      try {
-        const preview = await generatePreviewWithFallback(employeeId, documentKey)
-        previewUrl = preview.dataUrl
-        previewType = preview.type
-      } catch (previewErr) {
-        log.error({ err: previewErr }, `Preview generation failed for ${documentKey}`)
-      }
     } else {
       // --- Legacy PDF template pipeline ---
       if (signatureBuffer && Buffer.isBuffer(signatureBuffer)) {
@@ -140,14 +130,6 @@ export async function POST(request: NextRequest) {
             { error: result.error ?? 'PDF 생성에 실패했습니다.' },
             { status: 500 }
           )
-        }
-
-        try {
-          const preview = await generatePreviewWithFallback(employeeId, documentKey)
-          previewUrl = preview.dataUrl
-          previewType = preview.type
-        } catch (previewErr) {
-          log.error({ err: previewErr }, `Preview generation failed for ${documentKey}`)
         }
       }
       // If no signature (personal_info_consent), skip PDF generation for legacy pipeline
@@ -162,8 +144,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       status: DOC_STATUS.SIGNED,
-      previewUrl,
-      previewType,
     })
   } catch (err) {
     log.error({ err }, '서류 동의 처리 중 오류가 발생했습니다.')

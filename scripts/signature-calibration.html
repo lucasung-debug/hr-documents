@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>서명 위치 조정 도구</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f7; color: #1d1d1f; }
+  .header { background: #fff; border-bottom: 1px solid #d2d2d7; padding: 16px 24px; display: flex; align-items: center; gap: 16px; }
+  .header h1 { font-size: 18px; font-weight: 600; }
+  .controls { background: #fff; border-bottom: 1px solid #d2d2d7; padding: 12px 24px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .controls label { font-size: 13px; color: #6e6e73; }
+  .controls select, .controls input[type="file"] { font-size: 13px; padding: 6px 10px; border: 1px solid #d2d2d7; border-radius: 8px; }
+  .controls button { font-size: 13px; padding: 6px 16px; border-radius: 8px; border: none; cursor: pointer; font-weight: 500; }
+  .btn-primary { background: #007aff; color: #fff; }
+  .btn-primary:hover { background: #0056b3; }
+  .btn-secondary { background: #e8e8ed; color: #1d1d1f; }
+  .main { display: flex; height: calc(100vh - 120px); }
+  .canvas-area { flex: 1; overflow: auto; padding: 20px; position: relative; background: #e8e8ed; }
+  .page-container { position: relative; margin: 0 auto 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); background: #fff; }
+  .page-label { position: absolute; top: -24px; left: 0; font-size: 11px; color: #6e6e73; font-weight: 500; }
+  .signature-marker {
+    position: absolute; border: 2px solid #ff3b30; background: rgba(255, 59, 48, 0.15);
+    cursor: move; display: flex; align-items: center; justify-content: center;
+    font-size: 9px; color: #ff3b30; font-weight: 600; user-select: none;
+  }
+  .signature-marker:hover { background: rgba(255, 59, 48, 0.3); }
+  .signature-marker .resize-handle {
+    position: absolute; bottom: -4px; right: -4px; width: 8px; height: 8px;
+    background: #ff3b30; cursor: se-resize; border-radius: 2px;
+  }
+  .sidebar { width: 360px; background: #fff; border-left: 1px solid #d2d2d7; overflow-y: auto; padding: 16px; }
+  .sidebar h3 { font-size: 14px; font-weight: 600; margin-bottom: 12px; }
+  .pos-item { background: #f5f5f7; border-radius: 8px; padding: 10px; margin-bottom: 8px; font-size: 12px; }
+  .pos-item .label { font-weight: 600; margin-bottom: 4px; display: flex; justify-content: space-between; }
+  .pos-item .coords { color: #6e6e73; font-family: 'SF Mono', monospace; display: flex; gap: 6px; align-items: center; }
+  .pos-item .coords input { width: 60px; font-size: 12px; padding: 2px 4px; border: 1px solid #d2d2d7; border-radius: 4px; text-align: right; }
+  .pos-item .delete-btn { font-size: 10px; color: #ff3b30; border: none; background: none; cursor: pointer; }
+  .json-output { background: #1d1d1f; color: #30d158; padding: 12px; border-radius: 8px; font-family: 'SF Mono', monospace; font-size: 11px; white-space: pre-wrap; word-break: break-all; max-height: 300px; overflow-y: auto; margin-top: 12px; }
+  .info-bar { font-size: 11px; color: #6e6e73; padding: 4px 24px; background: #fafafa; border-bottom: 1px solid #e8e8ed; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>서명 위치 조정 도구</h1>
+  <span style="font-size:12px;color:#6e6e73">PDF 위에 서명 마커를 드래그하여 위치를 조정하세요</span>
+</div>
+
+<div class="controls">
+  <label>문서 선택:</label>
+  <select id="docSelect">
+    <option value="">-- 문서 선택 --</option>
+    <option value="labor_contract_monthly">근로계약서 (월급)</option>
+    <option value="labor_contract_daily">근로계약서 (일급)</option>
+    <option value="personal_info_consent">개인정보 동의서</option>
+    <option value="holiday_extension">연차휴가 연장 동의서</option>
+    <option value="data_security_pledge">보안 서약서</option>
+    <option value="compliance">준법행동 서약서</option>
+    <option value="overtime_work">연장근로 동의서</option>
+  </select>
+  <label>PDF 파일:</label>
+  <input type="file" id="pdfFile" accept=".pdf">
+  <label>페이지:</label>
+  <select id="pageSelect"><option value="0">Page 0</option></select>
+  <button class="btn-primary" onclick="addMarkerToSelectedPage()">+ 마커 추가</button>
+  <button class="btn-secondary" onclick="exportJson()">JSON 내보내기</button>
+  <button class="btn-secondary" onclick="loadCurrentConfig()">현재 설정 불러오기</button>
+</div>
+
+<div class="info-bar" id="infoBar">
+  PDF를 로드하면 페이지 크기와 좌표가 여기에 표시됩니다. | Y축: pdf-lib 기준 (하단=0)
+</div>
+
+<div class="main">
+  <div class="canvas-area" id="canvasArea"></div>
+  <div class="sidebar">
+    <h3>서명 위치 목록</h3>
+    <div id="markerList"></div>
+    <button class="btn-primary" onclick="exportJson()" style="width:100%;margin-top:12px">JSON 내보내기</button>
+    <div class="json-output" id="jsonOutput" style="display:none"></div>
+    <button class="btn-secondary" onclick="copyJson()" id="copyBtn" style="display:none;width:100%;margin-top:8px">클립보드에 복사</button>
+  </div>
+</div>
+
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+const RENDER_SCALE = 1.5;
+let pdfDoc = null;
+let pageInfos = [];
+let markers = [];
+let markerIdCounter = 0;
+let currentDocKey = '';
+
+const CURRENT_CONFIG = {
+  "labor_contract": [
+    { "page": 0, "x": 183, "y": 314, "width": 48, "height": 12 },
+    { "page": 1, "x": 340, "y": 583, "width": 48, "height": 12 },
+    { "page": 1, "x": 387, "y": 398, "width": 48, "height": 12 },
+    { "page": 1, "x": 454, "y": 248, "width": 48, "height": 11 }
+  ],
+  "labor_contract_monthly": [
+    { "page": 0, "x": 183, "y": 314, "width": 48, "height": 12 },
+    { "page": 1, "x": 340, "y": 583, "width": 48, "height": 12 },
+    { "page": 1, "x": 387, "y": 398, "width": 48, "height": 12 },
+    { "page": 1, "x": 454, "y": 248, "width": 48, "height": 11 }
+  ],
+  "labor_contract_daily": [
+    { "page": 1, "x": 335, "y": 581, "width": 48, "height": 11 },
+    { "page": 1, "x": 387, "y": 395, "width": 48, "height": 11 },
+    { "page": 1, "x": 467, "y": 249, "width": 48, "height": 13 }
+  ],
+  "personal_info_consent": { "page": 2, "x": 441, "y": 293, "width": 40, "height": 13 },
+  "data_security_pledge": { "page": 0, "x": 293, "y": 105, "width": 40, "height": 13 },
+  "compliance": { "page": 0, "x": 447, "y": 235, "width": 48, "height": 19 },
+  "holiday_extension": { "page": 0, "x": 330, "y": 120, "width": 57, "height": 20 },
+  "overtime_work": { "page": 0, "x": 402, "y": 227, "width": 47, "height": 16 }
+};
+
+document.getElementById('docSelect').addEventListener('change', function(e) {
+  currentDocKey = e.target.value;
+});
+
+document.getElementById('pdfFile').addEventListener('change', async function(e) {
+  var file = e.target.files[0];
+  if (!file) return;
+  var arrayBuffer = await file.arrayBuffer();
+  pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  await renderAllPages();
+});
+
+async function renderAllPages() {
+  var area = document.getElementById('canvasArea');
+  while (area.firstChild) area.removeChild(area.firstChild);
+  pageInfos = [];
+  markers = [];
+  updateMarkerList();
+
+  for (var i = 0; i < pdfDoc.numPages; i++) {
+    var page = await pdfDoc.getPage(i + 1);
+    var viewport = page.getViewport({ scale: RENDER_SCALE });
+    var pdfViewport = page.getViewport({ scale: 1 });
+
+    var container = document.createElement('div');
+    container.className = 'page-container';
+    container.style.width = viewport.width + 'px';
+    container.style.height = viewport.height + 'px';
+
+    var label = document.createElement('div');
+    label.className = 'page-label';
+    label.textContent = 'Page ' + i + ' (' + Math.round(pdfViewport.width) + 'x' + Math.round(pdfViewport.height) + ' pt)';
+    container.appendChild(label);
+
+    var canvas = document.createElement('canvas');
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    canvas.style.width = '100%';
+    canvas.style.height = '100%';
+    container.appendChild(canvas);
+    area.appendChild(container);
+
+    var ctx = canvas.getContext('2d');
+    await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+
+    pageInfos.push({
+      canvas: canvas, container: container,
+      pdfWidth: pdfViewport.width,
+      pdfHeight: pdfViewport.height,
+      renderScale: RENDER_SCALE,
+    });
+  }
+
+  // Update page selector dropdown
+  var pageSelect = document.getElementById('pageSelect');
+  while (pageSelect.firstChild) pageSelect.removeChild(pageSelect.firstChild);
+  for (var pi = 0; pi < pdfDoc.numPages; pi++) {
+    var opt = document.createElement('option');
+    opt.value = String(pi);
+    opt.textContent = 'Page ' + pi;
+    pageSelect.appendChild(opt);
+  }
+
+  document.getElementById('infoBar').textContent =
+    pdfDoc.numPages + ' pages | ' + pageInfos.map(function(p, i) {
+      return 'Page ' + i + ': ' + Math.round(p.pdfWidth) + 'x' + Math.round(p.pdfHeight) + 'pt';
+    }).join(' | ') + ' | Y axis: bottom=0 (pdf-lib)';
+}
+
+function addMarkerToSelectedPage() {
+  var pageIdx = parseInt(document.getElementById('pageSelect').value, 10);
+  addMarker(pageIdx, 100, 100, 40, 13);
+}
+
+function addMarker(pageIdx, pdfX, pdfY, w, h) {
+  if (pageIdx === undefined) pageIdx = 0;
+  if (pdfX === undefined) pdfX = 100;
+  if (pdfY === undefined) pdfY = 100;
+  if (w === undefined) w = 40;
+  if (h === undefined) h = 13;
+
+  if (pageInfos.length === 0) { alert('PDF file must be loaded first.'); return; }
+  if (pageIdx >= pageInfos.length) pageIdx = 0;
+
+  var info = pageInfos[pageIdx];
+  var id = markerIdCounter++;
+
+  var el = document.createElement('div');
+  el.className = 'signature-marker';
+  var span = document.createElement('span');
+  span.textContent = '#' + id;
+  el.appendChild(span);
+  var resizeHandle = document.createElement('div');
+  resizeHandle.className = 'resize-handle';
+  el.appendChild(resizeHandle);
+  info.container.appendChild(el);
+
+  var marker = { id: id, page: pageIdx, x: pdfX, y: pdfY, width: w, height: h, element: el };
+  markers.push(marker);
+
+  positionMarkerElement(marker);
+  setupDrag(marker);
+  updateMarkerList();
+}
+
+function pdfToScreen(pageIdx, pdfX, pdfY, pdfW, pdfH) {
+  var info = pageInfos[pageIdx];
+  var scale = RENDER_SCALE;
+  var screenX = pdfX * scale;
+  var screenY = (info.pdfHeight - pdfY - pdfH) * scale;
+  return { left: screenX, top: screenY, width: pdfW * scale, height: pdfH * scale };
+}
+
+function screenToPdf(pageIdx, screenLeft, screenTop, screenW, screenH) {
+  var info = pageInfos[pageIdx];
+  var scale = RENDER_SCALE;
+  var pdfX = screenLeft / scale;
+  var pdfH = screenH / scale;
+  var pdfY = info.pdfHeight - (screenTop / scale) - pdfH;
+  var pdfW = screenW / scale;
+  return {
+    x: Math.round(pdfX * 10) / 10,
+    y: Math.round(pdfY * 10) / 10,
+    width: Math.round(pdfW * 10) / 10,
+    height: Math.round(pdfH * 10) / 10
+  };
+}
+
+function positionMarkerElement(marker) {
+  var pos = pdfToScreen(marker.page, marker.x, marker.y, marker.width, marker.height);
+  marker.element.style.left = pos.left + 'px';
+  marker.element.style.top = pos.top + 'px';
+  marker.element.style.width = pos.width + 'px';
+  marker.element.style.height = pos.height + 'px';
+}
+
+function setupDrag(marker) {
+  var el = marker.element;
+  var resizeHandle = el.querySelector('.resize-handle');
+
+  var dragging = false, startX, startY, origLeft, origTop;
+  el.addEventListener('mousedown', function(e) {
+    if (e.target === resizeHandle) return;
+    dragging = true;
+    startX = e.clientX; startY = e.clientY;
+    origLeft = parseFloat(el.style.left);
+    origTop = parseFloat(el.style.top);
+    e.preventDefault();
+  });
+
+  var resizing = false, resStartX, resStartY, origW, origH;
+  resizeHandle.addEventListener('mousedown', function(e) {
+    resizing = true;
+    resStartX = e.clientX; resStartY = e.clientY;
+    origW = parseFloat(el.style.width);
+    origH = parseFloat(el.style.height);
+    e.preventDefault();
+    e.stopPropagation();
+  });
+
+  document.addEventListener('mousemove', function(e) {
+    if (dragging) {
+      var dx = e.clientX - startX, dy = e.clientY - startY;
+      var newLeft = origLeft + dx, newTop = origTop + dy;
+      el.style.left = newLeft + 'px';
+      el.style.top = newTop + 'px';
+      var pdf = screenToPdf(marker.page, newLeft, newTop, parseFloat(el.style.width), parseFloat(el.style.height));
+      marker.x = pdf.x; marker.y = pdf.y;
+      updateMarkerList();
+    }
+    if (resizing) {
+      var dx2 = e.clientX - resStartX, dy2 = e.clientY - resStartY;
+      var newW = Math.max(20, origW + dx2), newH = Math.max(8, origH + dy2);
+      el.style.width = newW + 'px';
+      el.style.height = newH + 'px';
+      var pdf2 = screenToPdf(marker.page, parseFloat(el.style.left), parseFloat(el.style.top), newW, newH);
+      marker.width = pdf2.width; marker.height = pdf2.height;
+      updateMarkerList();
+    }
+  });
+
+  document.addEventListener('mouseup', function() { dragging = false; resizing = false; });
+}
+
+function removeMarker(id) {
+  var idx = markers.findIndex(function(m) { return m.id === id; });
+  if (idx === -1) return;
+  markers[idx].element.remove();
+  markers.splice(idx, 1);
+  updateMarkerList();
+}
+
+function updateMarkerList() {
+  var list = document.getElementById('markerList');
+  while (list.firstChild) list.removeChild(list.firstChild);
+
+  markers.forEach(function(m) {
+    var item = document.createElement('div');
+    item.className = 'pos-item';
+
+    var labelDiv = document.createElement('div');
+    labelDiv.className = 'label';
+    var labelText = document.createElement('span');
+    labelText.textContent = '#' + m.id + ' (Page ' + m.page + ')';
+    var deleteBtn = document.createElement('button');
+    deleteBtn.className = 'delete-btn';
+    deleteBtn.textContent = 'delete';
+    deleteBtn.addEventListener('click', function() { removeMarker(m.id); });
+    labelDiv.appendChild(labelText);
+    labelDiv.appendChild(deleteBtn);
+
+    var coordsDiv = document.createElement('div');
+    coordsDiv.className = 'coords';
+
+    // Page selector for this marker
+    var pageLbl = document.createElement('span');
+    pageLbl.textContent = 'page:';
+    var pageInput = document.createElement('select');
+    pageInput.style.cssText = 'font-size:12px;padding:2px 4px;border:1px solid #d2d2d7;border-radius:4px;width:70px;';
+    for (var pi = 0; pi < pageInfos.length; pi++) {
+      var pOpt = document.createElement('option');
+      pOpt.value = String(pi);
+      pOpt.textContent = 'Page ' + pi;
+      if (pi === m.page) pOpt.selected = true;
+      pageInput.appendChild(pOpt);
+    }
+    (function(markerId) {
+      pageInput.addEventListener('change', function() { moveMarkerToPage(markerId, parseInt(this.value, 10)); });
+    })(m.id);
+    coordsDiv.appendChild(pageLbl);
+    coordsDiv.appendChild(pageInput);
+
+    var fields = [
+      { label: 'x', value: m.x, field: 'x' },
+      { label: 'y', value: m.y, field: 'y' },
+      { label: 'w', value: m.width, field: 'width' },
+      { label: 'h', value: m.height, field: 'height' },
+    ];
+
+    fields.forEach(function(f) {
+      var lbl = document.createElement('span');
+      lbl.textContent = f.label + ':';
+      var input = document.createElement('input');
+      input.type = 'number';
+      input.value = f.value;
+      input.step = '1';
+      input.addEventListener('change', function() { updateMarkerField(m.id, f.field, this.value); });
+      coordsDiv.appendChild(lbl);
+      coordsDiv.appendChild(input);
+    });
+
+    item.appendChild(labelDiv);
+    item.appendChild(coordsDiv);
+    list.appendChild(item);
+  });
+}
+
+function updateMarkerField(id, field, value) {
+  var marker = markers.find(function(m) { return m.id === id; });
+  if (!marker) return;
+  marker[field] = parseFloat(value);
+  positionMarkerElement(marker);
+}
+
+function moveMarkerToPage(id, newPage) {
+  var marker = markers.find(function(m) { return m.id === id; });
+  if (!marker || newPage >= pageInfos.length) return;
+  // Remove from old page container
+  marker.element.remove();
+  // Add to new page container
+  marker.page = newPage;
+  pageInfos[newPage].container.appendChild(marker.element);
+  positionMarkerElement(marker);
+  updateMarkerList();
+}
+
+function loadCurrentConfig() {
+  if (!currentDocKey) { alert('Select a document first.'); return; }
+  if (pageInfos.length === 0) { alert('Load a PDF file first.'); return; }
+
+  markers.forEach(function(m) { m.element.remove(); });
+  markers = [];
+
+  var cfg = CURRENT_CONFIG[currentDocKey];
+  if (!cfg) { alert('No config found for ' + currentDocKey); return; }
+
+  var positions = Array.isArray(cfg) ? cfg : [cfg];
+  for (var i = 0; i < positions.length; i++) {
+    var pos = positions[i];
+    addMarker(pos.page, pos.x, pos.y, pos.width, pos.height);
+  }
+}
+
+function exportJson() {
+  if (!currentDocKey) { alert('Select a document first.'); return; }
+
+  var positions = markers.map(function(m) {
+    return {
+      page: m.page,
+      x: Math.round(m.x),
+      y: Math.round(m.y),
+      width: Math.round(m.width),
+      height: Math.round(m.height),
+    };
+  });
+
+  var result = positions.length === 1 ? positions[0] : positions;
+  var obj = {};
+  obj[currentDocKey] = result;
+  // labor_contract_monthly also exports as labor_contract (both keys used in code)
+  if (currentDocKey === 'labor_contract_monthly') {
+    obj['labor_contract'] = result;
+  }
+  var json = JSON.stringify(obj, null, 2);
+
+  var output = document.getElementById('jsonOutput');
+  output.textContent = json;
+  output.style.display = 'block';
+  document.getElementById('copyBtn').style.display = 'block';
+}
+
+function copyJson() {
+  var text = document.getElementById('jsonOutput').textContent;
+  navigator.clipboard.writeText(text).then(function() {
+    var btn = document.getElementById('copyBtn');
+    btn.textContent = 'Copied!';
+    setTimeout(function() { btn.textContent = 'Copy to clipboard'; }, 1500);
+  });
+}
+</script>
+</body>
+</html>

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { MaterialsSection } from '@/components/employee/MaterialsSection'
+import { apiFetch } from '@/lib/api/client-fetch'
 import type { EmployeeInfoResponse } from '@/types/api'
 
 type Tab = 'info' | 'materials'
@@ -18,7 +19,7 @@ export default function EmployeeIdPage() {
   useEffect(() => {
     const fetchInfo = async () => {
       try {
-        const res = await fetch('/api/employee/info')
+        const res = await apiFetch('/api/employee/info')
         if (!res.ok) throw new Error('정보 조회 실패')
         const data = await res.json()
         setInfo(data)
@@ -103,19 +104,7 @@ export default function EmployeeIdPage() {
             </div>
           </div>
 
-          {info.onboarding_link && (
-            <div className="bg-apple-gray-50 border border-apple-gray-100 rounded-apple-lg p-5">
-              <p className="text-sm font-semibold text-apple-gray-900 mb-2">온보딩 자료</p>
-              <a
-                href={info.onboarding_link}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm text-apple-blue underline break-all"
-              >
-                다운로드 링크 열기
-              </a>
-            </div>
-          )}
+
         </>
       )}
 

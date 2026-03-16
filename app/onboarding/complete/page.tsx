@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { SendConfirmModal } from '@/components/email/SendConfirmModal'
 import { Button } from '@/components/ui/Button'
+import { apiFetch } from '@/lib/api/client-fetch'
 
 export default function CompletePage() {
   const router = useRouter()
@@ -20,7 +21,7 @@ export default function CompletePage() {
     setSending(true)
     setError('')
     try {
-      const res = await fetch('/api/email/send', { method: 'POST' })
+      const res = await apiFetch('/api/email/send', { method: 'POST' })
       const data = await res.json()
 
       if (!res.ok) {

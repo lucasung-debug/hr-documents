@@ -1,57 +1,52 @@
-// Single source of truth for all 7 document keys.
+// Single source of truth for all 6 document keys.
 // Do NOT modify key names — they must match Google Sheets column names exactly.
 
 export const DOCUMENT_KEYS = [
   'labor_contract',
   'personal_info_consent',
-  'bank_account',
-  'health_certificate',
-  'criminal_check_consent',
-  'emergency_contact',
+  'holiday_extension',
   'data_security_pledge',
+  'compliance',
+  'overtime_work',
 ] as const
 
 export type DocumentKey = (typeof DOCUMENT_KEYS)[number]
 
 export const DOCUMENT_LABELS: Record<DocumentKey, string> = {
   labor_contract: '근로계약서',
-  personal_info_consent: '개인정보 수집·이용 동의서',
-  bank_account: '급여 이체 계좌 신청서',
-  health_certificate: '건강진단서 제출 확인서',
-  criminal_check_consent: '범죄경력조회 동의서',
-  emergency_contact: '비상연락망 등록 신청서',
-  data_security_pledge: '정보보안 서약서',
+  personal_info_consent: '개인정보 수집·제공·이용 동의서',
+  holiday_extension: '연차유급휴가 이월·미사용수당 지급기일 연장 동의서',
+  data_security_pledge: '보안 서약서',
+  compliance: '준법행동 실천 서약서',
+  overtime_work: '연장·야간·휴일근로 동의서',
 }
 
 export const DOCUMENT_DESCRIPTIONS: Record<DocumentKey, string> = {
   labor_contract: '근로 조건, 급여, 복리후생 등을 포함한 고용 계약서입니다.',
-  personal_info_consent: '인사·급여 관리를 위한 개인정보 수집 및 이용 동의서입니다.',
-  bank_account: '급여 이체를 위한 본인 명의 계좌 정보를 등록합니다.',
-  health_certificate: '입사 전 건강검진 결과서 제출을 확인하는 서류입니다.',
-  criminal_check_consent: '채용 절차에 필요한 범죄경력 조회 동의서입니다.',
-  emergency_contact: '비상 시 연락 가능한 보호자 정보를 등록합니다.',
+  personal_info_consent: '인사·급여 관리를 위한 개인정보 수집·제공·이용 동의서입니다.',
+  holiday_extension: '연차유급휴가의 이월 및 미사용수당 지급기일 연장에 동의하는 서류입니다.',
   data_security_pledge: '업무상 취득한 정보의 보안 유지를 서약하는 문서입니다.',
+  compliance: '준법행동을 실천하겠다는 서약서입니다.',
+  overtime_work: '연장·야간·휴일 근로에 대한 동의서입니다.',
 }
 
 export const PDF_FILENAME_SUFFIXES: Record<DocumentKey, string> = {
   labor_contract: '근로계약서',
   personal_info_consent: '개인정보동의',
-  bank_account: '계좌신청',
-  health_certificate: '건강진단',
-  criminal_check_consent: '범죄조회동의',
-  emergency_contact: '비상연락',
+  holiday_extension: '연차휴가연장',
   data_security_pledge: '보안서약',
+  compliance: '준법서약',
+  overtime_work: '연장근로동의',
 }
 
-// Signature required for all documents; emergency_contact is optional but still signed
+// Signature required for all 6 documents
 export const SIGNATURE_REQUIRED: Record<DocumentKey, boolean> = {
   labor_contract: true,
   personal_info_consent: true,
-  bank_account: true,
-  health_certificate: true,
-  criminal_check_consent: true,
-  emergency_contact: false,
+  holiday_extension: true,
   data_security_pledge: true,
+  compliance: true,
+  overtime_work: true,
 }
 
 export const DOC_STATUS = {

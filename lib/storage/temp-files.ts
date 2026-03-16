@@ -1,8 +1,9 @@
 import fs from 'fs'
+import os from 'os'
 import path from 'path'
 import type { DocumentKey } from '@/types/document'
 
-const BASE_DIR = '/tmp/hr-sessions'
+const BASE_DIR = path.join(os.tmpdir(), 'hr-sessions')
 
 export function getSessionDir(employeeId: string): string {
   return path.join(BASE_DIR, employeeId)
@@ -26,10 +27,18 @@ export function getPreviewPath(employeeId: string, documentKey: DocumentKey): st
   return path.join(getSessionDir(employeeId), `${documentKey}_preview.png`)
 }
 
+/** Set file to owner-only read/write (no-op on Windows) */
+function restrictPermissions(filePath: string): void {
+  if (process.platform !== 'win32') {
+    try { fs.chmodSync(filePath, 0o600) } catch { /* best-effort */ }
+  }
+}
+
 export function writeSignature(employeeId: string, buffer: Buffer): string {
   ensureSessionDir(employeeId)
   const filePath = getSignaturePath(employeeId)
   fs.writeFileSync(filePath, buffer)
+  restrictPermissions(filePath)
   return filePath
 }
 

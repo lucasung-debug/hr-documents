@@ -18,7 +18,9 @@ export function buildBaseVariables(
     position: employee.position,
     hire_date: employee.hire_date,
     adrress: employee.address, // Template uses {{adrress}} (typo preserved)
+    address: employee.address, // overtime_work uses {{address}} (correct spelling)
     birthday: employee.birthday,
+    phone: employee.phone,
     // Today's date split
     date_yy: String(today.getFullYear()),
     date_mm: padTwo(today.getMonth() + 1),
@@ -27,6 +29,8 @@ export function buildBaseVariables(
     hire_date_yy: String(hireDate.getFullYear()),
     hire_date_mm: padTwo(hireDate.getMonth() + 1),
     hire_date_dd: padTwo(hireDate.getDate()),
+    // Position name for {{position_name}} template variable
+    position_name: employee.position,
     // Signature placeholder (empty for preview, name for final)
     signature: '',
   }
@@ -48,6 +52,9 @@ export function buildContractVariables(
     salary_fix: conditions.salary_fix,
     salary_total: conditions.salary_total,
     work_hours: conditions.work_hours,
+    benefits: conditions.benefits,
+    probation_period: conditions.probation_period,
+    special_terms: conditions.special_terms,
     // Intern (probation) end date from EMPLOYEE_CONTRACT sheet
     intern_date_yy: String(internDate.getFullYear()),
     intern_date_mm: padTwo(internDate.getMonth() + 1),

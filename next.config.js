@@ -1,9 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
-  serverExternalPackages: ['puppeteer', 'sharp', 'pdf-lib'],
   experimental: {
     instrumentationHook: true,
+    serverComponentsExternalPackages: ['pino', 'pino-pretty', 'puppeteer', 'sharp', 'pdf-lib'],
   },
   async headers() {
     return [

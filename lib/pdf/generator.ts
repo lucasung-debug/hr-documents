@@ -5,16 +5,26 @@ import type { DocumentKey } from '@/types/document'
 import type { PdfGenerationResult } from '@/types/pdf'
 import { getSignaturePositionConfig } from './signature-config'
 import { getPdfPath, ensureSessionDir } from '@/lib/storage/temp-files'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('[pdf/generator]')
 
 function getTemplatePath(documentKey: DocumentKey): string {
   return path.join(process.cwd(), 'public', 'templates', `${documentKey}.pdf`)
 }
 
+/**
+ * @deprecated Use Sheets-based pipeline (lib/sheets/template.ts) instead.
+ * This legacy pipeline uses static PDF templates from public/templates/.
+ * It remains as a fallback when USE_SHEETS_TEMPLATES=false.
+ */
 export async function generateSignedPdf(
   employeeId: string,
   documentKey: DocumentKey,
   signatureBuffer: Buffer
 ): Promise<PdfGenerationResult> {
+  log.warn(`Legacy PDF pipeline used for ${documentKey}. Consider switching to Sheets templates.`)
+
   const templatePath = getTemplatePath(documentKey)
   const outputPath = getPdfPath(employeeId, documentKey)
 
@@ -84,6 +94,9 @@ export async function generateSignedPdf(
   }
 }
 
+/**
+ * @deprecated Use Sheets-based pipeline instead.
+ */
 export async function generateAllSignedPdfs(
   employeeId: string,
   signatureBuffer: Buffer,
