@@ -41,8 +41,21 @@ export async function POST(request: NextRequest) {
 
     const { documentKey } = parsed.data
 
-    // Read signature from temp storage
-    const signatureBuffer = readSignature(employeeId)
+    // personal_info_consent: signature is optional (handled before signature step)
+    const isPersonalInfoConsent = documentKey === 'personal_info_consent'
+    let signatureBuffer: Buffer | null = null
+
+    if (!isPersonalInfoConsent) {
+      signatureBuffer = readSignature(employeeId)
+    } else {
+      // Try to read signature if available, but don't fail if not
+      try {
+        signatureBuffer = readSignature(employeeId)
+      } catch {
+        // Signature not yet available for personal_info_consent
+        signatureBuffer = null
+      }
+    }
 
     let previewUrl: string | undefined
     let previewType: 'png' | 'pdf' | undefined
@@ -75,27 +88,30 @@ export async function POST(request: NextRequest) {
         employee.pay_sec
       )
 
-      // Embed signature image into the PDF
+      // Embed signature image into the PDF (if signature is available)
       const pdfDoc = await PDFDocument.load(pdfBuffer)
       const pages = pdfDoc.getPages()
-      const config = getSignaturePositionConfig()
-      const posKey = documentKey === 'labor_contract'
-        ? `labor_contract_${employee.pay_sec}` as const
-        : documentKey
-      const position = config[posKey] ?? config[documentKey]
 
-      // Support single position or array of positions
-      const positions = Array.isArray(position) ? position : position ? [position] : []
-      if (positions.length > 0) {
-        const sigImage = await pdfDoc.embedPng(signatureBuffer)
-        for (const pos of positions) {
-          if (pos.page < pages.length) {
-            pages[pos.page].drawImage(sigImage, {
-              x: pos.x,
-              y: pos.y,
-              width: pos.width,
-              height: pos.height,
-            })
+      if (signatureBuffer && Buffer.isBuffer(signatureBuffer)) {
+        const config = getSignaturePositionConfig()
+        const posKey = documentKey === 'labor_contract'
+          ? `labor_contract_${employee.pay_sec}` as const
+          : documentKey
+        const position = config[posKey] ?? config[documentKey]
+
+        // Support single position or array of positions
+        const positions = Array.isArray(position) ? position : position ? [position] : []
+        if (positions.length > 0) {
+          const sigImage = await pdfDoc.embedPng(signatureBuffer)
+          for (const pos of positions) {
+            if (pos.page < pages.length) {
+              pages[pos.page].drawImage(sigImage, {
+                x: pos.x,
+                y: pos.y,
+                width: pos.width,
+                height: pos.height,
+              })
+            }
           }
         }
       }
@@ -117,21 +133,24 @@ export async function POST(request: NextRequest) {
       }
     } else {
       // --- Legacy PDF template pipeline ---
-      const result = await generateSignedPdf(employeeId, documentKey, signatureBuffer)
-      if (!result.success) {
-        return NextResponse.json(
-          { error: result.error ?? 'PDF 생성에 실패했습니다.' },
-          { status: 500 }
-        )
-      }
+      if (signatureBuffer && Buffer.isBuffer(signatureBuffer)) {
+        const result = await generateSignedPdf(employeeId, documentKey, signatureBuffer)
+        if (!result.success) {
+          return NextResponse.json(
+            { error: result.error ?? 'PDF 생성에 실패했습니다.' },
+            { status: 500 }
+          )
+        }
 
-      try {
-        const preview = await generatePreviewWithFallback(employeeId, documentKey)
-        previewUrl = preview.dataUrl
-        previewType = preview.type
-      } catch (previewErr) {
-        log.error({ err: previewErr }, `Preview generation failed for ${documentKey}`)
+        try {
+          const preview = await generatePreviewWithFallback(employeeId, documentKey)
+          previewUrl = preview.dataUrl
+          previewType = preview.type
+        } catch (previewErr) {
+          log.error({ err: previewErr }, `Preview generation failed for ${documentKey}`)
+        }
       }
+      // If no signature (personal_info_consent), skip PDF generation for legacy pipeline
     }
 
     // Update Google Sheets status
