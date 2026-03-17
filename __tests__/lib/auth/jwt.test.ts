@@ -20,6 +20,7 @@ describe('JWT utilities', () => {
       employee_id: 'EMP001',
       name: '홍길동',
       phone: '010-1234-5678',
+      role: 'employee' as const,
     }
 
     const token = await signJwt(payload)
@@ -37,6 +38,7 @@ describe('JWT utilities', () => {
       employee_id: 'EMP002',
       name: '김철수',
       phone: '010-9876-5432',
+      role: 'employee' as const,
     }
 
     const token = await signJwt(payload)
@@ -52,7 +54,7 @@ describe('JWT utilities', () => {
     delete process.env.JWT_SECRET
 
     await expect(
-      signJwt({ employee_id: 'EMP003', name: '이영희', phone: '010-0000-0000' })
+      signJwt({ employee_id: 'EMP003', name: '이영희', phone: '010-0000-0000', role: 'employee' })
     ).rejects.toThrow('JWT_SECRET environment variable is not set')
   })
 })

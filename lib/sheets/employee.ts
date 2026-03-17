@@ -1,11 +1,11 @@
 import { getSheetsClient, SPREADSHEET_ID, SHEET_NAMES, withRetry } from './client'
 import { SESSION_STATUS } from '@/types/employee'
-import type { EmployeeMasterRow, SessionStatus } from '@/types/employee'
+import type { EmployeeMasterRow, SessionStatus, UserRole } from '@/types/employee'
 
 // Column order must match EMPLOYEE_MASTER sheet exactly:
 // A: employee_id, B: name, C: address, D: birthday, E: phone,
 // F: email, G: hire_date, H: department, I: position, J: pay_sec,
-// K: session_status, L: onboarding_link
+// K: session_status, L: onboarding_link, M: role
 
 function rowToEmployee(row: string[]): EmployeeMasterRow {
   const paySec = (row[9] ?? '').toLowerCase()
@@ -22,6 +22,7 @@ function rowToEmployee(row: string[]): EmployeeMasterRow {
     pay_sec: paySec === 'daily' ? 'daily' : 'monthly',
     session_status: (row[10] as SessionStatus) ?? SESSION_STATUS.PENDING,
     onboarding_link: row[11] ?? '',
+    role: (row[12] as UserRole) || 'employee',
   }
 }
 
@@ -30,7 +31,7 @@ export async function findEmployeeByNameAndPhone(
   phone: string
 ): Promise<{ employee: EmployeeMasterRow; rowIndex: number } | null> {
   const sheets = getSheetsClient()
-  const range = `${SHEET_NAMES.EMPLOYEE_MASTER}!A2:L`
+  const range = `${SHEET_NAMES.EMPLOYEE_MASTER}!A2:M`
 
   const response = await withRetry(() =>
     sheets.spreadsheets.values.get({
@@ -68,7 +69,7 @@ export async function getEmployeeById(
   employeeId: string
 ): Promise<{ employee: EmployeeMasterRow; rowIndex: number } | null> {
   const sheets = getSheetsClient()
-  const range = `${SHEET_NAMES.EMPLOYEE_MASTER}!A2:L`
+  const range = `${SHEET_NAMES.EMPLOYEE_MASTER}!A2:M`
 
   const response = await withRetry(() =>
     sheets.spreadsheets.values.get({

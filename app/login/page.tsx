@@ -41,7 +41,11 @@ export default function LoginPage() {
       }
 
       setEmployeeName(data.name)
-      router.push('/onboarding/privacy-consent')
+      if (data.role === 'admin') {
+        router.push('/admin/dashboard')
+      } else {
+        router.push('/onboarding/privacy-consent')
+      }
     } catch {
       setError('네트워크 오류가 발생했습니다. 잠시 후 다시 시도해주세요.')
     } finally {

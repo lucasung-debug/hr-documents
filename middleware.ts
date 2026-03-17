@@ -38,6 +38,7 @@ export async function middleware(request: NextRequest) {
     const requestHeaders = new Headers(request.headers)
     requestHeaders.set('x-employee-id', String(payload.employee_id ?? ''))
     requestHeaders.set('x-employee-name', encodeURIComponent(String(payload.name ?? '')))
+    requestHeaders.set('x-employee-role', String(payload.role ?? 'employee'))
 
     return NextResponse.next({ request: { headers: requestHeaders } })
   } catch {
@@ -53,10 +54,12 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     '/onboarding/:path*',
+    '/admin/:path*',
     '/api/sign/:path*',
     '/api/docs/:path*',
     '/api/employee/:path*',
     '/api/email/:path*',
     '/api/temp/:path*',
+    '/api/admin/:path*',
   ],
 }

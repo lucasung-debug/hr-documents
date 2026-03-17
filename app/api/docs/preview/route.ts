@@ -4,7 +4,7 @@ import type { DocumentKey } from '@/types/document'
 import { getEmployeeById } from '@/lib/sheets/employee'
 import { generatePdfFromTemplate } from '@/lib/sheets/template'
 import { getContractConditions } from '@/lib/sheets/contract'
-import { buildBaseVariables, buildContractVariables } from '@/lib/sheets/template-variables'
+import { buildBaseVariables, buildContractVariables, buildBankVariables } from '@/lib/sheets/template-variables'
 import { createLogger } from '@/lib/logger'
 import { apiFromUnknown } from '@/lib/api'
 
@@ -46,11 +46,15 @@ export async function GET(request: NextRequest) {
     const variables = buildBaseVariables(employee)
     // signature stays empty for preview
 
-    // For labor_contract, add individual contract conditions
-    if (documentKey === 'labor_contract') {
+    // For labor_contract and bank_account, add contract conditions
+    if (documentKey === 'labor_contract' || (documentKey as string) === 'bank_account') {
       const conditions = await getContractConditions(employeeId)
       if (conditions) {
-        Object.assign(variables, buildContractVariables(conditions))
+        if (documentKey === 'labor_contract') {
+          Object.assign(variables, buildContractVariables(conditions))
+        } else {
+          Object.assign(variables, buildBankVariables(conditions))
+        }
       }
     }
 

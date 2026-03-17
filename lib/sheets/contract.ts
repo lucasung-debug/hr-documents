@@ -4,7 +4,8 @@ import { getSheetsClient, SPREADSHEET_ID, withRetry } from './client'
 // A: employee_id, B: name, C: hire_date, D: intern_date,
 // E: position, F: pay_sec, G: salary_basic, H: salary_OT,
 // I: salary_fix, J: salary_total, K: work_hours,
-// L: benefits, M: probation_period, N: special_terms
+// L: benefits, M: probation_period, N: special_terms,
+// O: bank_name, P: account_number
 
 export interface ContractConditions {
   employee_id: string
@@ -20,6 +21,8 @@ export interface ContractConditions {
   benefits: string
   probation_period: string
   special_terms: string
+  bank_name: string
+  account_number: string
 }
 
 const SHEET_NAME = 'EMPLOYEE_CONTRACT'
@@ -39,6 +42,8 @@ function rowToConditions(row: string[]): ContractConditions {
     benefits: row[11] ?? '',
     probation_period: row[12] ?? '',
     special_terms: row[13] ?? '',
+    bank_name: row[14] ?? '',
+    account_number: row[15] ?? '',
   }
 }
 
@@ -54,7 +59,7 @@ export async function getContractConditions(
   const response = await withRetry(() =>
     sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID(),
-      range: `${SHEET_NAME}!A2:N`,
+      range: `${SHEET_NAME}!A2:P`,
     })
   )
 
@@ -82,5 +87,7 @@ export function contractToVariables(
     benefits: conditions.benefits,
     probation_period: conditions.probation_period,
     special_terms: conditions.special_terms,
+    bank_name: conditions.bank_name,
+    account_number: conditions.account_number,
   }
 }
