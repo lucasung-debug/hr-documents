@@ -41,13 +41,13 @@ export function SignaturePad({ onCapture, disabled = false }: SignaturePadProps)
           }}
         />
       </div>
-      <p className="text-xs text-apple-gray-500 text-center">위 박스 안에 서명해주세요</p>
+      <p className="text-xs sm:text-sm text-apple-gray-500 text-center">위 박스 안에 손가락으로 서명해주세요</p>
       <div className="flex gap-3">
         <Button
           variant="secondary"
           onClick={handleClear}
           disabled={disabled || isEmpty}
-          className="flex-1"
+          className="flex-1 min-h-[44px]"
         >
           다시 서명
         </Button>
@@ -55,7 +55,7 @@ export function SignaturePad({ onCapture, disabled = false }: SignaturePadProps)
           variant="primary"
           onClick={handleConfirm}
           disabled={disabled || isEmpty}
-          className="flex-1"
+          className="flex-1 min-h-[44px]"
         >
           서명 완료
         </Button>

@@ -24,21 +24,24 @@ export function Accordion({
   return (
     <div className="border border-apple-gray-200 rounded-apple-lg overflow-hidden">
       <div
-        className="flex items-center gap-3 px-4 py-3 bg-apple-gray-50 cursor-pointer select-none hover:bg-apple-gray-100 transition-colors"
+        className="flex items-center gap-3 px-4 py-3 bg-apple-gray-50 cursor-pointer select-none hover:bg-apple-gray-100 transition-colors min-h-[44px]"
         onClick={() => setOpen((v) => !v)}
       >
         {onCheck && (
-          <input
-            type="checkbox"
-            id={checkboxId}
-            checked={checked}
-            onChange={(e) => {
-              e.stopPropagation()
-              onCheck(e.target.checked)
-            }}
+          <span
+            className="flex items-center justify-center w-[44px] h-[44px] -m-3 flex-shrink-0"
             onClick={(e) => e.stopPropagation()}
-            className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer shrink-0"
-          />
+          >
+            <input
+              type="checkbox"
+              id={checkboxId}
+              checked={checked}
+              onChange={(e) => {
+                onCheck(e.target.checked)
+              }}
+              className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+            />
+          </span>
         )}
         <span className="flex-1 text-[15px] font-semibold text-apple-gray-900">
           {title}

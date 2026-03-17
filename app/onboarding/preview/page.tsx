@@ -99,7 +99,7 @@ export default function PreviewPage() {
                 key={p.key}
                 onClick={() => setCurrentIndex(i)}
                 className={`
-                  flex-shrink-0 text-left px-3 py-2.5 rounded-apple text-sm font-medium transition-colors
+                  flex-shrink-0 text-left px-3 py-3 rounded-apple text-sm font-medium transition-colors min-h-[44px]
                   ${i === currentIndex
                     ? 'bg-apple-blue-light text-apple-blue'
                     : 'text-apple-gray-700 hover:bg-apple-gray-100'
@@ -154,13 +154,11 @@ export default function PreviewPage() {
                   <object
                     data={current.previewUrl}
                     type="application/pdf"
-                    className="w-full"
-                    style={{ minHeight: '600px' }}
+                    className="w-full h-[50vh] sm:h-[60vh] lg:h-[600px]"
                   >
                     <iframe
                       src={current.previewUrl}
-                      className="w-full border-0"
-                      style={{ minHeight: '600px' }}
+                      className="w-full border-0 h-[50vh] sm:h-[60vh] lg:h-[600px]"
                       title={current.label}
                     />
                   </object>

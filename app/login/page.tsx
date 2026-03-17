@@ -65,7 +65,7 @@ export default function LoginPage() {
           </p>
         </div>
 
-        <div className="bg-white rounded-apple-xl shadow-apple-md border border-apple-gray-100 p-8 lg:p-10">
+        <div className="bg-white rounded-apple-xl shadow-apple-md border border-apple-gray-100 p-6 sm:p-8 lg:p-10">
           <form onSubmit={handleSubmit} className="flex flex-col gap-5">
             <Input
               id="login-name"

@@ -13,16 +13,16 @@ const cards = [
 
 export function StatsCards({ stats }: StatsCardsProps) {
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
       {cards.map(({ key, label, color }) => (
-        <div key={key} className={`rounded-apple-lg p-4 ${color}`}>
-          <p className="text-sm font-medium opacity-70">{label}</p>
-          <p className="text-2xl font-bold mt-1">{stats[key]}</p>
+        <div key={key} className={`rounded-apple-lg p-3 sm:p-4 ${color}`}>
+          <p className="text-xs sm:text-sm font-medium opacity-70">{label}</p>
+          <p className="text-xl sm:text-2xl font-bold mt-1">{stats[key]}</p>
         </div>
       ))}
-      <div className="rounded-apple-lg p-4 bg-indigo-50 text-indigo-700">
-        <p className="text-sm font-medium opacity-70">완료율</p>
-        <p className="text-2xl font-bold mt-1">{stats.completion_rate}%</p>
+      <div className="rounded-apple-lg p-3 sm:p-4 bg-indigo-50 text-indigo-700 col-span-2 sm:col-span-1">
+        <p className="text-xs sm:text-sm font-medium opacity-70">완료율</p>
+        <p className="text-xl sm:text-2xl font-bold mt-1">{stats.completion_rate}%</p>
       </div>
     </div>
   )

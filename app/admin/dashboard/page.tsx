@@ -85,8 +85,8 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold text-apple-gray-900">온보딩 현황</h2>
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="text-lg sm:text-xl font-bold text-apple-gray-900">온보딩 현황</h2>
         <button
           onClick={fetchDashboard}
           className="text-sm text-apple-blue hover:underline"

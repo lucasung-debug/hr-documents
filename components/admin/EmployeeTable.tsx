@@ -52,13 +52,13 @@ export function EmployeeTable({ employees, onSendReminder, reminderLoading }: Em
   return (
     <div className="bg-white rounded-apple-xl border border-apple-gray-100 shadow-apple-sm overflow-hidden">
       {/* Toolbar */}
-      <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 border-b border-apple-gray-100">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 sm:p-4 border-b border-apple-gray-100">
         <div className="flex gap-1">
           {(['all', 'incomplete', 'completed'] as FilterType[]).map(f => (
             <button
               key={f}
               onClick={() => setFilter(f)}
-              className={`px-3 py-1.5 text-sm rounded-full transition-colors ${
+              className={`px-3 py-2 text-sm rounded-full transition-colors min-h-[36px] ${
                 filter === f
                   ? 'bg-apple-blue text-white'
                   : 'text-apple-gray-600 hover:bg-apple-gray-100'
@@ -86,8 +86,8 @@ export function EmployeeTable({ employees, onSendReminder, reminderLoading }: Em
         )}
       </div>
 
-      {/* Table */}
-      <div className="overflow-x-auto">
+      {/* Desktop Table */}
+      <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-apple-gray-50 text-apple-gray-600 text-left">
@@ -100,8 +100,8 @@ export function EmployeeTable({ employees, onSendReminder, reminderLoading }: Em
                 />
               </th>
               <th className="px-4 py-3 font-medium">이름</th>
-              <th className="px-4 py-3 font-medium hidden sm:table-cell">부서</th>
-              <th className="px-4 py-3 font-medium hidden md:table-cell">입사일</th>
+              <th className="px-4 py-3 font-medium">부서</th>
+              <th className="px-4 py-3 font-medium">입사일</th>
               <th className="px-4 py-3 font-medium">진행상태</th>
               <th className="px-4 py-3 font-medium hidden lg:table-cell">이메일</th>
             </tr>
@@ -123,8 +123,8 @@ export function EmployeeTable({ employees, onSendReminder, reminderLoading }: Em
                     />
                   </td>
                   <td className="px-4 py-3 font-medium text-apple-gray-900">{emp.name}</td>
-                  <td className="px-4 py-3 text-apple-gray-600 hidden sm:table-cell">{emp.department}</td>
-                  <td className="px-4 py-3 text-apple-gray-600 hidden md:table-cell">{emp.hire_date}</td>
+                  <td className="px-4 py-3 text-apple-gray-600">{emp.department}</td>
+                  <td className="px-4 py-3 text-apple-gray-600">{emp.hire_date}</td>
                   <td className="px-4 py-3">
                     <StatusBadge completed={emp.completed_count} total={DOCUMENT_KEYS.length} />
                   </td>
@@ -135,7 +135,7 @@ export function EmployeeTable({ employees, onSendReminder, reminderLoading }: Em
                 {expandedId === emp.employee_id && (
                   <tr key={`${emp.employee_id}-detail`}>
                     <td colSpan={6} className="px-4 py-3 bg-apple-gray-50">
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+                      <div className="grid grid-cols-3 gap-2 text-xs">
                         {DOCUMENT_KEYS.map(key => {
                           const status = emp.documents[key]
                           const isDone = status !== 'pending'
@@ -168,6 +168,65 @@ export function EmployeeTable({ employees, onSendReminder, reminderLoading }: Em
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* Mobile Card View */}
+      <div className="md:hidden">
+        {filtered.length === 0 ? (
+          <div className="px-4 py-12 text-center text-apple-gray-500 text-sm">
+            {search ? '검색 결과가 없습니다.' : '직원 데이터가 없습니다.'}
+          </div>
+        ) : (
+          <div className="divide-y divide-apple-gray-100">
+            {filtered.map(emp => (
+              <div key={emp.employee_id} className="p-3">
+                <div className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    checked={selected.has(emp.employee_id)}
+                    onChange={() => toggleSelect(emp.employee_id)}
+                    className="rounded mt-1 flex-shrink-0"
+                  />
+                  <div
+                    className="flex-1 min-w-0 cursor-pointer"
+                    onClick={() => setExpandedId(expandedId === emp.employee_id ? null : emp.employee_id)}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="font-medium text-sm text-apple-gray-900 truncate">{emp.name}</p>
+                        <p className="text-xs text-apple-gray-500">{emp.department} · {emp.hire_date}</p>
+                      </div>
+                      <StatusBadge completed={emp.completed_count} total={DOCUMENT_KEYS.length} />
+                    </div>
+                    {expandedId === emp.employee_id && (
+                      <div className="mt-3 pt-3 border-t border-apple-gray-100">
+                        <div className="grid grid-cols-2 gap-1.5 text-xs">
+                          {DOCUMENT_KEYS.map(key => {
+                            const status = emp.documents[key]
+                            const isDone = status !== 'pending'
+                            return (
+                              <div key={key} className="flex items-center gap-1.5">
+                                <span className={`w-2 h-2 rounded-full flex-shrink-0 ${isDone ? 'bg-green-500' : 'bg-gray-300'}`} />
+                                <span className={`truncate ${isDone ? 'text-apple-gray-900' : 'text-apple-gray-400'}`}>
+                                  {DOCUMENT_LABELS[key]}
+                                </span>
+                              </div>
+                            )
+                          })}
+                        </div>
+                        {emp.all_completed_at && (
+                          <p className="text-xs text-apple-gray-500 mt-2">
+                            전체 완료: {emp.all_completed_at}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )

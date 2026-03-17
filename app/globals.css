@@ -5,11 +5,17 @@
 @layer base {
   html {
     -webkit-tap-highlight-color: transparent;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
   }
 
   /* Apple 디자인 시스템: 배경색 #f5f5f7, Inter 폰트 */
   body {
     @apply bg-apple-gray-50 text-apple-gray-900 antialiased font-sans;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
   }
 }
 
@@ -20,5 +26,11 @@
   .no-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;
+  }
+
+  /* 터치 타겟 최소 크기 (iOS 44px 권장) */
+  .touch-target {
+    min-width: 44px;
+    min-height: 44px;
   }
 }

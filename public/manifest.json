@@ -1,0 +1,23 @@
+{
+  "name": "입사 서류 전자서명",
+  "short_name": "전자서명",
+  "start_url": "/login",
+  "display": "standalone",
+  "background_color": "#f5f5f7",
+  "theme_color": "#1d4ed8",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
