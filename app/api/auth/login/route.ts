@@ -43,38 +43,43 @@ export async function POST(request: NextRequest) {
 
     const { employee, rowIndex } = result
 
-    if (employee.session_status === SESSION_STATUS.COMPLETED) {
+    // Admin users bypass the completed session check
+    if (employee.role !== 'admin' && employee.session_status === SESSION_STATUS.COMPLETED) {
       log.warn({ employeeId: employee.employee_id }, 'Login attempt on completed session')
       return apiError('이미 서류 제출이 완료된 계정입니다.', 409, ERROR_CODES.AUTH_002)
     }
 
-    // Update session status to IN_PROGRESS
-    await updateSessionStatus(rowIndex, SESSION_STATUS.IN_PROGRESS)
+    // Admin users skip onboarding session setup
+    if (employee.role !== 'admin') {
+      // Update session status to IN_PROGRESS
+      await updateSessionStatus(rowIndex, SESSION_STATUS.IN_PROGRESS)
 
-    // Ensure document status row exists, reset if re-login
-    const existingStatus = await findDocStatusByEmployeeId(employee.employee_id)
-    if (!existingStatus) {
-      await initDocStatusRow(employee.employee_id, employee.name, employee.phone)
-    } else {
-      log.info({ employeeId: employee.employee_id }, 'Resetting document statuses for re-login')
-      await resetDocStatuses(existingStatus.rowIndex)
+      // Ensure document status row exists, reset if re-login
+      const existingStatus = await findDocStatusByEmployeeId(employee.employee_id)
+      if (!existingStatus) {
+        await initDocStatusRow(employee.employee_id, employee.name, employee.phone)
+      } else {
+        log.info({ employeeId: employee.employee_id }, 'Resetting document statuses for re-login')
+        await resetDocStatuses(existingStatus.rowIndex)
+      }
+
+      // Clean previous session files and create fresh directory
+      deleteSessionDir(employee.employee_id)
+      ensureSessionDir(employee.employee_id)
     }
-
-    // Clean previous session files and create fresh directory
-    deleteSessionDir(employee.employee_id)
-    ensureSessionDir(employee.employee_id)
 
     // Issue JWT (30 min expiry, set by signJwt)
     const token = await signJwt({
       employee_id: employee.employee_id,
       name: employee.name,
       phone: employee.phone,
+      role: employee.role,
     })
 
     log.info({ employeeId: employee.employee_id }, 'Login successful')
     resetRateLimit(`login:${ip}`)
 
-    const response = apiOk({ success: true, name: employee.name })
+    const response = apiOk({ success: true, name: employee.name, role: employee.role })
     response.cookies.set('session_token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',

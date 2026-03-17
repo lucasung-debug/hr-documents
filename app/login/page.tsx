@@ -41,7 +41,11 @@ export default function LoginPage() {
       }
 
       setEmployeeName(data.name)
-      router.push('/onboarding/privacy-consent')
+      if (data.role === 'admin') {
+        router.push('/admin/dashboard')
+      } else {
+        router.push('/onboarding/privacy-consent')
+      }
     } catch {
       setError('네트워크 오류가 발생했습니다. 잠시 후 다시 시도해주세요.')
     } finally {
@@ -61,7 +65,7 @@ export default function LoginPage() {
           </p>
         </div>
 
-        <div className="bg-white rounded-apple-xl shadow-apple-md border border-apple-gray-100 p-8 lg:p-10">
+        <div className="bg-white rounded-apple-xl shadow-apple-md border border-apple-gray-100 p-6 sm:p-8 lg:p-10">
           <form onSubmit={handleSubmit} className="flex flex-col gap-5">
             <Input
               id="login-name"

@@ -112,20 +112,18 @@ export default function PrivacyConsentPage() {
               <p className="mb-3 text-apple-gray-600">{section.description}</p>
             )}
 
-            <table className="w-full border-collapse mb-3">
-              <tbody>
-                {section.table.map((row, i) => (
-                  <tr key={i} className="border border-apple-gray-200">
-                    <td className="bg-apple-gray-50 px-3 py-2 font-medium text-apple-gray-800 w-[140px] align-top whitespace-nowrap">
-                      {row.label}
-                    </td>
-                    <td className="px-3 py-2 text-apple-gray-700 whitespace-pre-line">
-                      {row.value}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <div className="mb-3 border border-apple-gray-200 rounded-apple overflow-hidden">
+              {section.table.map((row, i) => (
+                <div key={i} className={`flex flex-col sm:flex-row ${i > 0 ? 'border-t border-apple-gray-200' : ''}`}>
+                  <div className="bg-apple-gray-50 px-3 py-2 font-medium text-apple-gray-800 sm:w-[140px] sm:flex-shrink-0 text-[13px] sm:text-sm">
+                    {row.label}
+                  </div>
+                  <div className="px-3 py-2 text-apple-gray-700 whitespace-pre-line text-[13px] sm:text-sm">
+                    {row.value}
+                  </div>
+                </div>
+              ))}
+            </div>
 
             <p className="text-xs text-apple-gray-500 bg-apple-gray-50 rounded-apple px-3 py-2">
               {section.refusalNotice}

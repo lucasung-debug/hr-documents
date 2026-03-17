@@ -45,20 +45,19 @@ export function DocumentPreviewModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="preview-modal-title"
-        className="relative bg-white rounded-apple-xl shadow-apple-md w-full max-w-3xl mx-4 flex flex-col"
-        style={{ maxHeight: '90vh' }}
+        className="relative bg-white rounded-apple-xl shadow-apple-md w-full max-w-3xl mx-2 sm:mx-4 flex flex-col max-h-[95vh] sm:max-h-[90vh]"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-apple-gray-100">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-apple-gray-100">
           <h2
             id="preview-modal-title"
-            className="text-lg font-semibold text-apple-gray-900"
+            className="text-base sm:text-lg font-semibold text-apple-gray-900 truncate mr-2"
           >
             {title} — 미리보기
           </h2>
           <button
             onClick={onClose}
-            className="text-apple-gray-400 hover:text-apple-gray-600 transition-colors"
+            className="text-apple-gray-400 hover:text-apple-gray-600 transition-colors p-2 -m-2 touch-target flex-shrink-0"
             aria-label="닫기"
           >
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -92,13 +91,11 @@ export function DocumentPreviewModal({
             <object
               data={pdfDataUrl}
               type="application/pdf"
-              className="w-full rounded-apple"
-              style={{ height: '70vh' }}
+              className="w-full rounded-apple h-[55vh] sm:h-[70vh]"
             >
               <iframe
                 src={pdfDataUrl}
-                className="w-full border-0 rounded-apple"
-                style={{ height: '70vh' }}
+                className="w-full border-0 rounded-apple h-[55vh] sm:h-[70vh]"
                 title={`${title} 미리보기`}
               >
                 <div className="flex flex-col items-center justify-center h-full gap-3 text-apple-gray-500">
@@ -119,7 +116,7 @@ export function DocumentPreviewModal({
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end px-6 py-4 border-t border-apple-gray-100">
+        <div className="flex justify-end px-4 sm:px-6 py-3 sm:py-4 border-t border-apple-gray-100">
           <Button variant="secondary" onClick={onClose}>
             닫기
           </Button>

@@ -63,6 +63,18 @@ export function buildContractVariables(
 }
 
 /**
+ * Build bank account variables from EMPLOYEE_CONTRACT data.
+ */
+export function buildBankVariables(
+  conditions: ContractConditions
+): Record<string, string> {
+  return {
+    bank_name: conditions.bank_name ?? '',
+    account_number: conditions.account_number ?? '',
+  }
+}
+
+/**
  * Parse Korean-style date string like "2026.03.16" into a Date.
  */
 function parseKoreanDate(dateStr: string): Date {

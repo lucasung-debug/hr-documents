@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getEmployeeById } from '@/lib/sheets/employee'
+import { withCacheHeaders } from '@/lib/api/cache-headers'
 import type { EmployeeInfoResponse } from '@/types/api'
 import { createLogger } from '@/lib/logger'
 import { apiFromUnknown } from '@/lib/api'
@@ -28,7 +29,7 @@ export async function GET(request: NextRequest) {
       onboarding_link: employee.onboarding_link,
     }
 
-    return NextResponse.json(response)
+    return withCacheHeaders(NextResponse.json(response), 300) // 5min
   } catch (err) {
     log.error({ err }, '직원 정보 조회 중 오류가 발생했습니다.')
     return apiFromUnknown(err)

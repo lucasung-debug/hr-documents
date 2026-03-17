@@ -61,10 +61,10 @@ export async function POST(request: NextRequest) {
     // 5. Send emails
     const { sentAt } = await sendOnboardingEmails(employee, [...DOCUMENT_KEYS])
 
-    // 6. Update all document statuses to 'sent' in Sheets
-    for (const key of DOCUMENT_KEYS) {
-      await updateDocumentStatus(rowIndex, key, 'sent')
-    }
+    // 6. Update all document statuses to 'sent' in Sheets (parallel)
+    await Promise.all(
+      DOCUMENT_KEYS.map(key => updateDocumentStatus(rowIndex, key, 'sent'))
+    )
 
     // 7. Mark email sent with timestamp and signature hash
     await markEmailSent(rowIndex, signHash)

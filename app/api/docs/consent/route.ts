@@ -4,7 +4,7 @@ import { readSignature, ensureSessionDir, getPdfPath } from '@/lib/storage/temp-
 import { generateSignedPdf } from '@/lib/pdf/generator'
 import { generatePdfFromTemplate } from '@/lib/sheets/template'
 import { getContractConditions } from '@/lib/sheets/contract'
-import { buildBaseVariables, buildContractVariables } from '@/lib/sheets/template-variables'
+import { buildBaseVariables, buildContractVariables, buildBankVariables } from '@/lib/sheets/template-variables'
 import { getEmployeeById } from '@/lib/sheets/employee'
 import {
   findDocStatusByEmployeeId,
@@ -59,9 +59,10 @@ export async function POST(request: NextRequest) {
     if (USE_SHEETS) {
       // --- Sheets-based pipeline ---
       // Parallel fetch: employee info + contract conditions (if labor_contract)
+      const needsConditions = documentKey === 'labor_contract' || (documentKey as string) === 'bank_account'
       const [empResult, conditions] = await Promise.all([
         getEmployeeById(employeeId),
-        documentKey === 'labor_contract'
+        needsConditions
           ? getContractConditions(employeeId)
           : Promise.resolve(null),
       ])
@@ -78,6 +79,9 @@ export async function POST(request: NextRequest) {
 
       if (documentKey === 'labor_contract' && conditions) {
         Object.assign(variables, buildContractVariables(conditions))
+      }
+      if ((documentKey as string) === 'bank_account' && conditions) {
+        Object.assign(variables, buildBankVariables(conditions))
       }
 
       // Generate PDF from Sheets template (pay_sec selects monthly/daily)

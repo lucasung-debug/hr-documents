@@ -7,6 +7,8 @@ export type SessionStatus = typeof SESSION_STATUS[keyof typeof SESSION_STATUS]
 
 export type PaySection = 'monthly' | 'daily'
 
+export type UserRole = 'employee' | 'admin'
+
 export interface EmployeeMasterRow {
   employee_id: string
   name: string
@@ -17,9 +19,11 @@ export interface EmployeeMasterRow {
   hire_date: string
   department: string
   position: string
+  position_name: string
   pay_sec: PaySection
   session_status: SessionStatus
   onboarding_link: string
+  role: UserRole
 }
 
 export interface DocumentStatusRow {
@@ -41,6 +45,7 @@ export interface SessionPayload {
   employee_id: string
   name: string
   phone: string
+  role: UserRole
   iat?: number
   exp?: number
 }
