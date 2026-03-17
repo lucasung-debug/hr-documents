@@ -1,6 +1,7 @@
 import { getSheetsClient, SPREADSHEET_ID, SHEET_NAMES, withRetry } from './client'
 import { SESSION_STATUS } from '@/types/employee'
 import type { EmployeeMasterRow, SessionStatus, UserRole } from '@/types/employee'
+import { cache, CACHE_TTL } from '@/lib/cache/memory-cache'
 
 // Column order must match EMPLOYEE_MASTER sheet exactly:
 // A: employee_id, B: name, C: address, D: birthday, E: phone,
@@ -64,11 +65,17 @@ export async function updateSessionStatus(
       requestBody: { values: [[status]] },
     })
   )
+  // Invalidate employee cache since status changed
+  cache.invalidate('employee:')
 }
 
 export async function getEmployeeById(
   employeeId: string
 ): Promise<{ employee: EmployeeMasterRow; rowIndex: number } | null> {
+  const cacheKey = `employee:id:${employeeId}`
+  const cached = cache.get<{ employee: EmployeeMasterRow; rowIndex: number }>(cacheKey)
+  if (cached) return cached
+
   const sheets = getSheetsClient()
   const range = `${SHEET_NAMES.EMPLOYEE_MASTER}!A2:N`
 
@@ -83,7 +90,9 @@ export async function getEmployeeById(
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i] as string[]
     if (row[0] === employeeId) {
-      return { employee: rowToEmployee(row), rowIndex: i + 2 }
+      const result = { employee: rowToEmployee(row), rowIndex: i + 2 }
+      cache.set(cacheKey, result, CACHE_TTL.EMPLOYEE)
+      return result
     }
   }
   return null

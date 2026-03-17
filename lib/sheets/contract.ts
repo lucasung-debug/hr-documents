@@ -1,4 +1,5 @@
 import { getSheetsClient, SPREADSHEET_ID, withRetry } from './client'
+import { cache, CACHE_TTL } from '@/lib/cache/memory-cache'
 
 // EMPLOYEE_CONTRACT sheet columns:
 // A: employee_id, B: name, C: hire_date, D: intern_date,
@@ -54,6 +55,10 @@ function rowToConditions(row: string[]): ContractConditions {
 export async function getContractConditions(
   employeeId: string
 ): Promise<ContractConditions | null> {
+  const cacheKey = `contract:${employeeId}`
+  const cached = cache.get<ContractConditions>(cacheKey)
+  if (cached) return cached
+
   const sheets = getSheetsClient()
 
   const response = await withRetry(() =>
@@ -66,7 +71,9 @@ export async function getContractConditions(
   const rows = response.data.values ?? []
   for (const row of rows) {
     if ((row as string[])[0] === employeeId) {
-      return rowToConditions(row as string[])
+      const result = rowToConditions(row as string[])
+      cache.set(cacheKey, result, CACHE_TTL.CONTRACT)
+      return result
     }
   }
   return null

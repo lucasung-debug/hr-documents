@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { DOCUMENT_KEYS, DOCUMENT_LABELS, SIGNATURE_REQUIRED } from '@/types/document'
 import { getDocumentStatuses } from '@/lib/sheets/document-status'
+import { withCacheHeaders } from '@/lib/api/cache-headers'
 import type { DocListItem } from '@/types/api'
 import { createLogger } from '@/lib/logger'
 import { apiFromUnknown } from '@/lib/api'
@@ -23,7 +24,7 @@ export async function GET(request: NextRequest) {
       signatureRequired: SIGNATURE_REQUIRED[key],
     }))
 
-    return NextResponse.json({ docs })
+    return withCacheHeaders(NextResponse.json({ docs }), 60) // 1min
   } catch (err) {
     log.error({ err }, '서류 목록 조회 중 오류가 발생했습니다.')
     return apiFromUnknown(err)

@@ -6,6 +6,7 @@ import { DOCUMENT_KEYS, DOCUMENT_LABELS } from '@/types/document'
 import type { DocumentKey } from '@/types/document'
 import { Button } from '@/components/ui/Button'
 import { apiFetch } from '@/lib/api/client-fetch'
+import { getCachedPreview, setCachedPreview } from '@/lib/api/preview-cache'
 
 interface PreviewItem {
   key: DocumentKey
@@ -31,6 +32,19 @@ export default function PreviewPage() {
   const [currentIndex, setCurrentIndex] = useState(0)
 
   const fetchSinglePreview = useCallback(async (key: DocumentKey) => {
+    // Check client-side cache first
+    const cached = getCachedPreview(key)
+    if (cached) {
+      setPreviews((prev) =>
+        prev.map((p) =>
+          p.key === key
+            ? { ...p, previewUrl: cached.previewUrl, previewType: cached.previewType, loading: false, error: null }
+            : p
+        )
+      )
+      return
+    }
+
     setPreviews((prev) =>
       prev.map((p) => (p.key === key ? { ...p, loading: true, error: null } : p))
     )
@@ -44,16 +58,15 @@ export default function PreviewPage() {
       if (!res.ok) {
         throw new Error(data.error ?? '미리보기 생성에 실패했습니다.')
       }
+      const url = data.previewUrl ?? null
+      const type = data.previewType ?? 'pdf'
+      if (url) {
+        setCachedPreview(key, url, type)
+      }
       setPreviews((prev) =>
         prev.map((p) =>
           p.key === key
-            ? {
-                ...p,
-                previewUrl: data.previewUrl ?? null,
-                previewType: data.previewType ?? 'pdf',
-                loading: false,
-                error: null,
-              }
+            ? { ...p, previewUrl: url, previewType: type, loading: false, error: null }
             : p
         )
       )
