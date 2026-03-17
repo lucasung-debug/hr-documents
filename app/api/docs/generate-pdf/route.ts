@@ -28,12 +28,21 @@ export async function POST(request: NextRequest) {
 
     if (!pdfExists(employeeId, documentKey)) {
       return NextResponse.json(
-        { error: '서명된 PDF가 없습니다. 먼저 동의를 완료해주세요.' },
+        { error: `서명된 PDF가 없습니다 (${documentKey}). 먼저 동의를 완료해주세요.` },
         { status: 404 }
       )
     }
 
-    const result = await generatePreviewWithFallback(employeeId, documentKey)
+    let result: { dataUrl: string; type: 'png' | 'pdf' }
+    try {
+      result = await generatePreviewWithFallback(employeeId, documentKey)
+    } catch (previewErr) {
+      log.error({ err: previewErr, documentKey }, 'PDF 미리보기 파일 읽기 실패')
+      return NextResponse.json(
+        { error: 'PDF 파일을 읽을 수 없습니다. 다시 시도해주세요.' },
+        { status: 500 }
+      )
+    }
 
     return NextResponse.json({
       success: true,

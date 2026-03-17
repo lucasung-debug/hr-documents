@@ -95,18 +95,25 @@ export function DocumentPreviewModal({
               className="w-full rounded-apple"
               style={{ height: '70vh' }}
             >
-              <div className="flex flex-col items-center justify-center h-full gap-3 text-apple-gray-500">
-                <p className="text-sm">
-                  PDF 미리보기를 표시할 수 없습니다.
-                </p>
-                <a
-                  href={pdfDataUrl}
-                  download={`${title}.pdf`}
-                  className="text-sm text-apple-blue underline"
-                >
-                  PDF 다운로드
-                </a>
-              </div>
+              <iframe
+                src={pdfDataUrl}
+                className="w-full border-0 rounded-apple"
+                style={{ height: '70vh' }}
+                title={`${title} 미리보기`}
+              >
+                <div className="flex flex-col items-center justify-center h-full gap-3 text-apple-gray-500">
+                  <p className="text-sm">
+                    PDF 미리보기를 표시할 수 없습니다.
+                  </p>
+                  <a
+                    href={pdfDataUrl}
+                    download={`${title}.pdf`}
+                    className="text-sm text-apple-blue underline"
+                  >
+                    PDF 다운로드
+                  </a>
+                </div>
+              </iframe>
             </object>
           )}
         </div>

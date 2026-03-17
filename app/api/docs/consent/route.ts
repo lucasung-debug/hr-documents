@@ -104,14 +104,25 @@ export async function POST(request: NextRequest) {
           const sigImage = await pdfDoc.embedPng(signatureBuffer)
           for (const pos of positions) {
             if (pos.page < pages.length) {
-              pages[pos.page].drawImage(sigImage, {
+              const page = pages[pos.page]
+              const { width: pageW, height: pageH } = page.getSize()
+              if (pos.x + pos.width > pageW || pos.y + pos.height > pageH) {
+                log.warn({ documentKey, posKey, page: pos.page, pageW, pageH, pos },
+                  'Signature position may extend beyond page bounds')
+              }
+              page.drawImage(sigImage, {
                 x: pos.x,
                 y: pos.y,
                 width: pos.width,
                 height: pos.height,
               })
+            } else {
+              log.warn({ documentKey, posKey, page: pos.page, totalPages: pages.length },
+                'Signature position references non-existent page')
             }
           }
+        } else {
+          log.warn({ documentKey, posKey }, 'No signature positions configured')
         }
       }
 

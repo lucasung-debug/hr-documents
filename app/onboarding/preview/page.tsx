@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { DOCUMENT_KEYS, DOCUMENT_LABELS } from '@/types/document'
 import type { DocumentKey } from '@/types/document'
@@ -13,6 +13,7 @@ interface PreviewItem {
   previewUrl: string | null
   previewType: 'png' | 'pdf' | null
   loading: boolean
+  error: string | null
 }
 
 export default function PreviewPage() {
@@ -24,41 +25,58 @@ export default function PreviewPage() {
       previewUrl: null,
       previewType: null,
       loading: true,
+      error: null,
     }))
   )
   const [currentIndex, setCurrentIndex] = useState(0)
 
-  useEffect(() => {
-    const fetchPreviews = async () => {
-      for (const key of DOCUMENT_KEYS) {
-        try {
-          const res = await apiFetch('/api/docs/generate-pdf', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ documentKey: key }),
-          })
-          const data = await res.json()
-          setPreviews((prev) =>
-            prev.map((p) =>
-              p.key === key
-                ? {
-                    ...p,
-                    previewUrl: data.previewUrl ?? null,
-                    previewType: data.previewType ?? 'png',
-                    loading: false,
-                  }
-                : p
-            )
-          )
-        } catch {
-          setPreviews((prev) =>
-            prev.map((p) => (p.key === key ? { ...p, loading: false } : p))
-          )
-        }
+  const fetchSinglePreview = useCallback(async (key: DocumentKey) => {
+    setPreviews((prev) =>
+      prev.map((p) => (p.key === key ? { ...p, loading: true, error: null } : p))
+    )
+    try {
+      const res = await apiFetch('/api/docs/generate-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ documentKey: key }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        throw new Error(data.error ?? '미리보기 생성에 실패했습니다.')
       }
+      setPreviews((prev) =>
+        prev.map((p) =>
+          p.key === key
+            ? {
+                ...p,
+                previewUrl: data.previewUrl ?? null,
+                previewType: data.previewType ?? 'pdf',
+                loading: false,
+                error: null,
+              }
+            : p
+        )
+      )
+    } catch (err) {
+      setPreviews((prev) =>
+        prev.map((p) =>
+          p.key === key
+            ? {
+                ...p,
+                loading: false,
+                error: err instanceof Error ? err.message : '미리보기 로드 실패',
+              }
+            : p
+        )
+      )
     }
-    fetchPreviews()
   }, [])
+
+  useEffect(() => {
+    // Parallel loading for all documents
+    const results = DOCUMENT_KEYS.map((key) => fetchSinglePreview(key))
+    Promise.allSettled(results)
+  }, [fetchSinglePreview])
 
   const current = previews[currentIndex]
 
@@ -94,6 +112,11 @@ export default function PreviewPage() {
                       <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                     </svg>
                   )}
+                  {!p.loading && p.error && (
+                    <svg className="w-3.5 h-3.5 text-red-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                  )}
                   {p.label}
                 </span>
               </button>
@@ -112,6 +135,19 @@ export default function PreviewPage() {
                 <div className="flex items-center gap-2 text-apple-gray-500">
                   <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-apple-blue" />
                   <span className="text-sm">미리보기 생성 중...</span>
+                </div>
+              ) : current?.error ? (
+                <div className="flex flex-col items-center gap-3 text-center">
+                  <p className="text-sm text-red-600 bg-red-50 rounded-apple px-4 py-3">
+                    {current.error}
+                  </p>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => fetchSinglePreview(current.key)}
+                  >
+                    다시 시도
+                  </Button>
                 </div>
               ) : current?.previewUrl ? (
                 current.previewType === 'pdf' ? (
