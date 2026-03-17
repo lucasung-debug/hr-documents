@@ -7,20 +7,11 @@ services:
       dockerfile: Dockerfile
     ports:
       - '3000:3000'
+    env_file:
+      - .env.local
     environment:
       - NODE_ENV=production
       - PORT=3000
-      # Load all secrets from .env.local (do NOT commit this file)
-      - JWT_SECRET=${JWT_SECRET}
-      - GOOGLE_SPREADSHEET_ID=${GOOGLE_SPREADSHEET_ID}
-      - SHEET_EMPLOYEE_MASTER=${SHEET_EMPLOYEE_MASTER:-EMPLOYEE_MASTER}
-      - SHEET_DOCUMENT_STATUS=${SHEET_DOCUMENT_STATUS:-DOCUMENT_STATUS}
-      - GMAIL_CLIENT_ID=${GMAIL_CLIENT_ID}
-      - GMAIL_CLIENT_SECRET=${GMAIL_CLIENT_SECRET}
-      - GMAIL_CLIENT_REFRESH_TOKEN=${GMAIL_CLIENT_REFRESH_TOKEN}
-      - GMAIL_SENDER_ADDRESS=${GMAIL_SENDER_ADDRESS}
-      - HR_EMAIL_RECIPIENTS=${HR_EMAIL_RECIPIENTS}
-      - NEXT_PUBLIC_BASE_URL=${NEXT_PUBLIC_BASE_URL}
       - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
     restart: unless-stopped
     tmpfs:

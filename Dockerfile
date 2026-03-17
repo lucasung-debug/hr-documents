@@ -1,5 +1,9 @@
 FROM node:20-alpine AS base
 
+# Use HTTP mirrors to avoid corporate TLS inspection issues
+RUN echo "http://dl-cdn.alpinelinux.org/alpine/v3.21/main" > /etc/apk/repositories && \
+  echo "http://dl-cdn.alpinelinux.org/alpine/v3.21/community" >> /etc/apk/repositories
+
 # Install system dependencies for Puppeteer (Chromium) and sharp
 RUN apk add --no-cache \
   chromium \
