@@ -32,6 +32,13 @@ services:
       # Mount PDF templates (update these with actual documents before deploying)
       - ./public/templates:/app/public/templates:ro
 
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    command: tunnel --no-autoupdate --url http://app:3000
+    restart: unless-stopped
+    depends_on:
+      - app
+
 networks:
   default:
     name: hr-documents-net
