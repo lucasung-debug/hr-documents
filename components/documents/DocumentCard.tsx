@@ -57,11 +57,18 @@ export function DocumentCard({ doc, onConsent }: DocumentCardProps) {
     }
   }
 
+  const [consentError, setConsentError] = useState<string | null>(null)
+
   const handleConsent = async () => {
     if (!agreed || isComplete || !previewed) return
     setLoading(true)
+    setConsentError(null)
     try {
       await onConsent(doc.key)
+    } catch (err) {
+      setConsentError(
+        err instanceof Error ? err.message : '서류 처리 중 오류가 발생했습니다.'
+      )
     } finally {
       setLoading(false)
     }
@@ -118,6 +125,11 @@ export function DocumentCard({ doc, onConsent }: DocumentCardProps) {
               onChange={(e) => setAgreed(e.target.checked)}
               disabled={loading || !previewed}
             />
+            {consentError && (
+              <p className="text-xs text-red-600 bg-red-50 rounded-apple px-3 py-2">
+                {consentError}
+              </p>
+            )}
             <Button
               size="sm"
               onClick={handleConsent}

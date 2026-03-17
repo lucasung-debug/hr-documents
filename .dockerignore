@@ -1,0 +1,6 @@
+node_modules
+.next
+.env*
+_tmp_*
+*.log
+.git

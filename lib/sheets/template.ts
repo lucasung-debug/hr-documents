@@ -55,17 +55,146 @@ export async function getTemplateSheet(
   return (response.data.values as string[][]) ?? []
 }
 
+/** Detected checkbox cell with its resolved boolean value */
+interface CheckboxCell {
+  row: number
+  col: number
+  value: boolean
+}
+
 /**
- * Clear checkbox cells so RAW write doesn't put "TRUE"/"FALSE" text.
- * Row 19 (0-indexed: 18) has checkboxes: B=col 1, D=col 3.
- * Actual boolean values are set separately via updateCells batchUpdate.
+ * Scan template data for all TRUE/FALSE cells (checkbox indicators from Sheets).
+ * Returns their positions and clears them in the data for safe RAW write.
  */
-function clearCheckboxCells(data: string[][]): string[][] {
-  const row = 18 // 0-indexed row 19
-  if (row >= data.length) return data
-  if (data[row].length > 1) data[row][1] = ''
-  if (data[row].length > 3) data[row][3] = ''
-  return data
+function detectAndClearCheckboxCells(data: string[][]): { row: number; col: number }[] {
+  const positions: { row: number; col: number }[] = []
+  for (let r = 0; r < data.length; r++) {
+    for (let c = 0; c < data[r].length; c++) {
+      if (data[r][c] === 'TRUE' || data[r][c] === 'FALSE') {
+        positions.push({ row: r, col: c })
+        data[r][c] = ''
+      }
+    }
+  }
+  return positions
+}
+
+/**
+ * Resolve what boolean value each checkbox should have based on document type.
+ *
+ * Rules:
+ * - personal_info_consent: ALL checkboxes → TRUE (전체 동의)
+ * - holiday_extension row 7: B(col1)=TRUE(동의함), D(col3)=FALSE(미동의)
+ * - labor_contract row 7: B(col1)=TRUE(정함없음), D(col3)=FALSE(정함있음)
+ * - labor_contract row 18: based on work_hours variable
+ * - All others: first column in pair → TRUE, second → FALSE
+ */
+function resolveCheckboxValues(
+  positions: { row: number; col: number }[],
+  documentKey: string,
+  variables: Record<string, string>,
+  data: string[][]
+): CheckboxCell[] {
+  // Group by row (horizontal pairs) and by column (vertical pairs)
+  const rowGroups = new Map<number, { row: number; col: number }[]>()
+  const colGroups = new Map<number, { row: number; col: number }[]>()
+  for (const pos of positions) {
+    const rg = rowGroups.get(pos.row) || []
+    rg.push(pos)
+    rowGroups.set(pos.row, rg)
+
+    const cg = colGroups.get(pos.col) || []
+    cg.push(pos)
+    colGroups.set(pos.col, cg)
+  }
+
+  // labor_contract: 가로 쌍 중 "주간"/"2교대" 라벨이 있는 행 = 근무형태
+  let workHoursPairRow: number | undefined
+  if (documentKey === 'labor_contract') {
+    const horizontalPairs = [...rowGroups.entries()]
+      .filter(([, cells]) => cells.length >= 2)
+      .sort(([rowA], [rowB]) => rowA - rowB)
+
+    // 라벨 기반 감지: 같은 행에 "주간" 또는 "2교대" 텍스트가 있는 가로 쌍
+    for (const [pairRow] of horizontalPairs) {
+      const rowData = data[pairRow] || []
+      const hasWorkLabel = rowData.some(cell =>
+        cell.includes('주간') || cell.includes('2교대')
+      )
+      if (hasWorkLabel) {
+        workHoursPairRow = pairRow
+        break
+      }
+    }
+    // 폴백: 라벨 없으면 기존 로직 (2번째 가로 쌍)
+    if (workHoursPairRow === undefined) {
+      workHoursPairRow = horizontalPairs[1]?.[0]
+    }
+
+    console.log('[checkbox] horizontalPairs:', horizontalPairs.map(([r]) => r))
+    console.log('[checkbox] workHoursPairRow:', workHoursPairRow)
+    console.log('[checkbox] work_hours value:', variables.work_hours)
+  }
+
+  return positions.map(({ row, col }) => {
+    let value: boolean
+
+    if (documentKey === 'labor_contract' && row === workHoursPairRow) {
+      // 근무형태 — depends on work_hours
+      const workHours = variables.work_hours || '주간'
+      const is2shift = workHours === '2교대'
+      const rowCells = rowGroups.get(row) || []
+      const sorted = [...rowCells].sort((a, b) => a.col - b.col)
+      value = col === sorted[0].col ? !is2shift : is2shift
+    } else {
+      const rowCells = rowGroups.get(row) || []
+      if (rowCells.length >= 2) {
+        // Horizontal pair (same row): left = 동의(TRUE), right = 미동의(FALSE)
+        const sorted = [...rowCells].sort((a, b) => a.col - b.col)
+        value = col === sorted[0].col
+      } else {
+        // Check for vertical pair (same column, different rows)
+        const colCells = colGroups.get(col) || []
+        if (colCells.length >= 2) {
+          // Vertical pair: top row = 동의(TRUE), bottom row = 미동의(FALSE)
+          const sorted = [...colCells].sort((a, b) => a.row - b.row)
+          value = row === sorted[0].row
+        } else {
+          // Unpaired single checkbox: default TRUE
+          value = true
+        }
+      }
+    }
+
+    return { row, col, value }
+  })
+}
+
+/**
+ * Build updateCells batchUpdate requests to set real boolean values.
+ * This is the only way to write actual checkbox booleans (not text).
+ */
+function buildCheckboxRequests(
+  cells: CheckboxCell[],
+  sheetId: number
+): object[] {
+  return cells.map(({ row, col, value }) => ({
+    updateCells: {
+      range: {
+        sheetId,
+        startRowIndex: row,
+        endRowIndex: row + 1,
+        startColumnIndex: col,
+        endColumnIndex: col + 1,
+      },
+      rows: [{
+        values: [{
+          userEnteredValue: { boolValue: value },
+        }],
+      }],
+      fields: 'userEnteredValue',
+    },
+  }))
 }
 
 /**
@@ -77,7 +206,7 @@ function clearCheckboxCells(data: string[][]): string[][] {
  * 1. Copy TPL_ sheet via copyTo (preserves everything)
  * 2. Rename copied sheet to WORK_xxx
  * 3. Read values, replace {{placeholders}}, write back
- * 4. Apply work_hours checkbox for labor contracts
+ * 4. Auto-detect checkbox cells, set correct booleans via updateCells
  * 5. Export WORK_ sheet as PDF
  * 6. Delete WORK_ sheet
  */
@@ -148,10 +277,9 @@ export async function fillTemplate(
     })
   )
 
-  // Clear checkbox cells before RAW write to avoid "TRUE"/"FALSE" text
-  if (documentKey === 'labor_contract') {
-    filledData = clearCheckboxCells(filledData)
-  }
+  // Auto-detect checkbox cells, clear them for RAW write, then resolve values
+  const checkboxPositions = detectAndClearCheckboxCells(filledData)
+  const checkboxCells = resolveCheckboxValues(checkboxPositions, documentKey, variables, filledData)
 
   // Write replaced values back with RAW to preserve phone number leading zeros
   if (filledData.length > 0) {
@@ -165,52 +293,13 @@ export async function fillTemplate(
     )
   }
 
-  // Set checkbox boolean values via updateCells (only way to write real booleans)
-  // Always set booleans for labor_contract — default to '주간' if work_hours is empty
-  if (documentKey === 'labor_contract') {
-    const workHours = variables.work_hours || '주간'
-    const is2shift = workHours === '2교대'
+  // Set all checkbox boolean values via updateCells (only way to write real booleans)
+  if (checkboxCells.length > 0) {
+    const requests = buildCheckboxRequests(checkboxCells, copiedSheetId)
     await withRetry(() =>
       sheets.spreadsheets.batchUpdate({
         spreadsheetId,
-        requestBody: {
-          requests: [
-            {
-              updateCells: {
-                range: {
-                  sheetId: copiedSheetId,
-                  startRowIndex: 18, // 0-indexed row 19
-                  endRowIndex: 19,
-                  startColumnIndex: 1, // column B
-                  endColumnIndex: 2,
-                },
-                rows: [{
-                  values: [{
-                    userEnteredValue: { boolValue: !is2shift },
-                  }],
-                }],
-                fields: 'userEnteredValue',
-              },
-            },
-            {
-              updateCells: {
-                range: {
-                  sheetId: copiedSheetId,
-                  startRowIndex: 18,
-                  endRowIndex: 19,
-                  startColumnIndex: 3, // column D
-                  endColumnIndex: 4,
-                },
-                rows: [{
-                  values: [{
-                    userEnteredValue: { boolValue: is2shift },
-                  }],
-                }],
-                fields: 'userEnteredValue',
-              },
-            },
-          ],
-        },
+        requestBody: { requests },
       })
     )
   }
@@ -323,9 +412,9 @@ async function exportWithRetry(
       const isForbidden = errStatus === 403 || errMsg.includes('403')
       if (isForbidden) throw err
 
-      // Retryable: 400/404 = sheet not yet recognized by export endpoint
-      const isRetryable = errStatus === 400 || errStatus === 404 ||
-        errMsg.includes('400') || errMsg.includes('404')
+      // Retryable: 400/404 = sheet not yet recognized, 429 = rate limit
+      const isRetryable = errStatus === 400 || errStatus === 404 || errStatus === 429 ||
+        errMsg.includes('400') || errMsg.includes('404') || errMsg.includes('429')
       if (!isRetryable || attempt >= maxRetries - 1) throw err
 
       // Exponential backoff: 1s, 2s, 4s

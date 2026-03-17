@@ -56,6 +56,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    let pdfError: string | null = null
+
     if (USE_SHEETS) {
       // --- Sheets-based pipeline ---
       // Parallel fetch: employee info + contract conditions (if labor_contract)
@@ -84,58 +86,63 @@ export async function POST(request: NextRequest) {
         Object.assign(variables, buildBankVariables(conditions))
       }
 
-      // Generate PDF from Sheets template (pay_sec selects monthly/daily)
-      const pdfBuffer = await generatePdfFromTemplate(
-        documentKey,
-        variables,
-        employee.pay_sec
-      )
+      try {
+        // Generate PDF from Sheets template (pay_sec selects monthly/daily)
+        const pdfBuffer = await generatePdfFromTemplate(
+          documentKey,
+          variables,
+          employee.pay_sec
+        )
 
-      // Embed signature image into the PDF (if signature is available)
-      const pdfDoc = await PDFDocument.load(pdfBuffer)
-      const pages = pdfDoc.getPages()
+        // Embed signature image into the PDF (if signature is available)
+        const pdfDoc = await PDFDocument.load(pdfBuffer)
+        const pages = pdfDoc.getPages()
 
-      if (signatureBuffer && Buffer.isBuffer(signatureBuffer)) {
-        const config = getSignaturePositionConfig()
-        const posKey = documentKey === 'labor_contract'
-          ? `labor_contract_${employee.pay_sec}` as const
-          : documentKey
-        const position = config[posKey] ?? config[documentKey]
+        if (signatureBuffer && Buffer.isBuffer(signatureBuffer)) {
+          const config = getSignaturePositionConfig()
+          const posKey = documentKey === 'labor_contract'
+            ? `labor_contract_${employee.pay_sec}` as const
+            : documentKey
+          const position = config[posKey] ?? config[documentKey]
 
-        // Support single position or array of positions
-        const positions = Array.isArray(position) ? position : position ? [position] : []
-        if (positions.length > 0) {
-          const sigImage = await pdfDoc.embedPng(signatureBuffer)
-          for (const pos of positions) {
-            if (pos.page < pages.length) {
-              const page = pages[pos.page]
-              const { width: pageW, height: pageH } = page.getSize()
-              if (pos.x + pos.width > pageW || pos.y + pos.height > pageH) {
-                log.warn({ documentKey, posKey, page: pos.page, pageW, pageH, pos },
-                  'Signature position may extend beyond page bounds')
+          // Support single position or array of positions
+          const positions = Array.isArray(position) ? position : position ? [position] : []
+          if (positions.length > 0) {
+            const sigImage = await pdfDoc.embedPng(signatureBuffer)
+            for (const pos of positions) {
+              if (pos.page < pages.length) {
+                const page = pages[pos.page]
+                const { width: pageW, height: pageH } = page.getSize()
+                if (pos.x + pos.width > pageW || pos.y + pos.height > pageH) {
+                  log.warn({ documentKey, posKey, page: pos.page, pageW, pageH, pos },
+                    'Signature position may extend beyond page bounds')
+                }
+                page.drawImage(sigImage, {
+                  x: pos.x,
+                  y: pos.y,
+                  width: pos.width,
+                  height: pos.height,
+                })
+              } else {
+                log.warn({ documentKey, posKey, page: pos.page, totalPages: pages.length },
+                  'Signature position references non-existent page')
               }
-              page.drawImage(sigImage, {
-                x: pos.x,
-                y: pos.y,
-                width: pos.width,
-                height: pos.height,
-              })
-            } else {
-              log.warn({ documentKey, posKey, page: pos.page, totalPages: pages.length },
-                'Signature position references non-existent page')
             }
+          } else {
+            log.warn({ documentKey, posKey }, 'No signature positions configured')
           }
-        } else {
-          log.warn({ documentKey, posKey }, 'No signature positions configured')
         }
+
+        const signedPdfBytes = await pdfDoc.save()
+
+        // Save to temp storage
+        ensureSessionDir(employeeId)
+        const outputPath = getPdfPath(employeeId, documentKey)
+        fs.writeFileSync(outputPath, signedPdfBytes)
+      } catch (pdfErr) {
+        log.error({ err: pdfErr, documentKey }, 'PDF 생성 실패 — 상태는 서명완료로 전환합니다.')
+        pdfError = String((pdfErr as { message?: string })?.message ?? pdfErr)
       }
-
-      const signedPdfBytes = await pdfDoc.save()
-
-      // Save to temp storage
-      ensureSessionDir(employeeId)
-      const outputPath = getPdfPath(employeeId, documentKey)
-      fs.writeFileSync(outputPath, signedPdfBytes)
     } else {
       // --- Legacy PDF template pipeline ---
       if (signatureBuffer && Buffer.isBuffer(signatureBuffer)) {
@@ -150,7 +157,7 @@ export async function POST(request: NextRequest) {
       // If no signature (personal_info_consent), skip PDF generation for legacy pipeline
     }
 
-    // Update Google Sheets status
+    // Update Google Sheets status — always attempt even if PDF generation failed
     const statusResult = await findDocStatusByEmployeeId(employeeId)
     if (statusResult) {
       await updateDocumentStatus(statusResult.rowIndex, documentKey, DOC_STATUS.SIGNED)
@@ -159,6 +166,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       status: DOC_STATUS.SIGNED,
+      ...(pdfError ? { pdfWarning: 'PDF 생성 중 오류가 발생했으나 서명은 완료되었습니다.' } : {}),
     })
   } catch (err) {
     log.error({ err }, '서류 동의 처리 중 오류가 발생했습니다.')

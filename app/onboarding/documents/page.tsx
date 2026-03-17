@@ -17,7 +17,7 @@ export default function DocumentsPage() {
 
   const fetchDocs = useCallback(async () => {
     try {
-      const res = await apiFetch('/api/docs/list')
+      const res = await apiFetch(`/api/docs/list?_t=${Date.now()}`)
       if (!res.ok) throw new Error('서류 목록 조회 실패')
       const data = await res.json()
       // Filter out personal_info_consent (handled in privacy-consent step)
