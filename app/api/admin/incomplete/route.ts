@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
       withRetry(() =>
         sheets.spreadsheets.values.get({
           spreadsheetId: SPREADSHEET_ID(),
-          range: `${SHEET_NAMES.EMPLOYEE_MASTER}!A2:M`,
+          range: `${SHEET_NAMES.EMPLOYEE_MASTER}!A2:N`,
         })
       ),
       withRetry(() =>
@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
     for (const row of empRows) {
       const r = row as string[]
       const employeeId = r[0] ?? ''
-      const role = r[12] || 'employee'
+      const role = r[13] || 'employee'
       if (role === 'admin' || !employeeId) continue
 
       const docRow = docStatusMap.get(employeeId)
@@ -84,7 +84,7 @@ export async function GET(request: NextRequest) {
         name: r[1] ?? '',
         department: r[7] ?? '',
         hire_date: r[6] ?? '',
-        session_status: (r[10] as SessionStatus) ?? 'PENDING',
+        session_status: (r[11] as SessionStatus) ?? 'PENDING',
         documents,
         completed_count: completedCount,
         all_completed_at: '',

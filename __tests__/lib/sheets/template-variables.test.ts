@@ -8,7 +8,8 @@ describe('buildBaseVariables', () => {
     name: '홍길동',
     phone: '010-1234-5678',
     department: '개발팀',
-    position: '사원',
+    position: '사무직',
+    position_name: '사원',
     hire_date: '2026.03.16',
     address: '서울시 강남구',
     birthday: '1990.01.15',
@@ -25,7 +26,7 @@ describe('buildBaseVariables', () => {
     expect(vars.employee_name).toBe('홍길동')
     expect(vars.name).toBe('홍길동')
     expect(vars.department).toBe('개발팀')
-    expect(vars.position).toBe('사원')
+    expect(vars.position).toBe('사무직')
     expect(vars.hire_date).toBe('2026.03.16')
     expect(vars.adrress).toBe('서울시 강남구') // typo preserved
     expect(vars.birthday).toBe('1990.01.15')

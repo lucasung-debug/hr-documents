@@ -19,6 +19,7 @@ export interface EmployeeMasterRow {
   hire_date: string
   department: string
   position: string
+  position_name: string
   pay_sec: PaySection
   session_status: SessionStatus
   onboarding_link: string

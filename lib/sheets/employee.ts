@@ -4,11 +4,11 @@ import type { EmployeeMasterRow, SessionStatus, UserRole } from '@/types/employe
 
 // Column order must match EMPLOYEE_MASTER sheet exactly:
 // A: employee_id, B: name, C: address, D: birthday, E: phone,
-// F: email, G: hire_date, H: department, I: position, J: pay_sec,
-// K: session_status, L: onboarding_link, M: role
+// F: email, G: hire_date, H: department, I: position, J: position_name,
+// K: pay_sec, L: session_status, M: onboarding_link, N: role
 
 function rowToEmployee(row: string[]): EmployeeMasterRow {
-  const paySec = (row[9] ?? '').toLowerCase()
+  const paySec = (row[10] ?? '').toLowerCase()
   return {
     employee_id: row[0] ?? '',
     name: row[1] ?? '',
@@ -19,10 +19,11 @@ function rowToEmployee(row: string[]): EmployeeMasterRow {
     hire_date: row[6] ?? '',
     department: row[7] ?? '',
     position: row[8] ?? '',
+    position_name: row[9] ?? '',
     pay_sec: paySec === 'daily' ? 'daily' : 'monthly',
-    session_status: (row[10] as SessionStatus) ?? SESSION_STATUS.PENDING,
-    onboarding_link: row[11] ?? '',
-    role: (row[12] as UserRole) || 'employee',
+    session_status: (row[11] as SessionStatus) ?? SESSION_STATUS.PENDING,
+    onboarding_link: row[12] ?? '',
+    role: (row[13] as UserRole) || 'employee',
   }
 }
 
@@ -31,7 +32,7 @@ export async function findEmployeeByNameAndPhone(
   phone: string
 ): Promise<{ employee: EmployeeMasterRow; rowIndex: number } | null> {
   const sheets = getSheetsClient()
-  const range = `${SHEET_NAMES.EMPLOYEE_MASTER}!A2:M`
+  const range = `${SHEET_NAMES.EMPLOYEE_MASTER}!A2:N`
 
   const response = await withRetry(() =>
     sheets.spreadsheets.values.get({
@@ -58,7 +59,7 @@ export async function updateSessionStatus(
   await withRetry(() =>
     sheets.spreadsheets.values.update({
       spreadsheetId: SPREADSHEET_ID(),
-      range: `${SHEET_NAMES.EMPLOYEE_MASTER}!K${rowIndex}`,
+      range: `${SHEET_NAMES.EMPLOYEE_MASTER}!L${rowIndex}`,
       valueInputOption: 'RAW',
       requestBody: { values: [[status]] },
     })
@@ -69,7 +70,7 @@ export async function getEmployeeById(
   employeeId: string
 ): Promise<{ employee: EmployeeMasterRow; rowIndex: number } | null> {
   const sheets = getSheetsClient()
-  const range = `${SHEET_NAMES.EMPLOYEE_MASTER}!A2:M`
+  const range = `${SHEET_NAMES.EMPLOYEE_MASTER}!A2:N`
 
   const response = await withRetry(() =>
     sheets.spreadsheets.values.get({

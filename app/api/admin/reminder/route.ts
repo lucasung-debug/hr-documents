@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
     const response = await withRetry(() =>
       sheets.spreadsheets.values.get({
         spreadsheetId: SPREADSHEET_ID(),
-        range: `${SHEET_NAMES.EMPLOYEE_MASTER}!A2:M`,
+        range: `${SHEET_NAMES.EMPLOYEE_MASTER}!A2:N`,
       })
     )
 

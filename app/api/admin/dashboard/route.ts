@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
       withRetry(() =>
         sheets.spreadsheets.values.get({
           spreadsheetId: SPREADSHEET_ID(),
-          range: `${SHEET_NAMES.EMPLOYEE_MASTER}!A2:M`,
+          range: `${SHEET_NAMES.EMPLOYEE_MASTER}!A2:N`,
         })
       ),
       withRetry(() =>
@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
     for (const row of empRows) {
       const r = row as string[]
       const employeeId = r[0] ?? ''
-      const role = r[12] || 'employee'
+      const role = r[13] || 'employee'
 
       // Skip admin users from the dashboard
       if (role === 'admin') continue
@@ -82,7 +82,7 @@ export async function GET(request: NextRequest) {
         documents[key] = status
       }
 
-      const sessionStatus = (r[10] as SessionStatus) ?? 'PENDING'
+      const sessionStatus = (r[11] as SessionStatus) ?? 'PENDING'
       const allCompletedAt = docRow?.[9] ?? ''
       const emailSentAt = docRow?.[10] ?? ''
 
