@@ -1,11 +1,13 @@
 /**
  * Calibrate signature positions on ACTUAL Sheets-generated PDFs.
  *
- * Connects to Google Sheets, generates the labor contract PDF (same pipeline
- * as the app), then draws red calibration markers at configured signature positions.
+ * Connects to Google Sheets, generates PDFs for ALL document types
+ * (matching production pipeline: scale='4', margins=0.15),
+ * then draws red calibration markers at configured signature positions.
  *
- * Usage: node scripts/calibrate-sheets-pdf.mjs [employeeId]
- * Output: scripts/calibration-output/sheets_<docKey>_calibrated.pdf
+ * Usage: node scripts/calibrate-sheets-pdf.mjs
+ * Output: scripts/calibration-output/sheets_<docKey>_raw.pdf
+ *         scripts/calibration-output/sheets_<docKey>_calibrated.pdf
  */
 
 import fs from 'fs'
@@ -13,10 +15,11 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 import { PDFDocument, rgb } from 'pdf-lib'
 import { google } from 'googleapis'
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.join(__dirname, '..')
 
-// Load .env.local manually (no dotenv dependency)
+// Load .env.local manually
 const envPath = path.join(ROOT, '.env.local')
 if (fs.existsSync(envPath)) {
   const envContent = fs.readFileSync(envPath, 'utf-8')
@@ -42,12 +45,45 @@ if (!SPREADSHEET_ID || !CLIENT_ID || !CLIENT_SECRET || !REFRESH_TOKEN) {
   process.exit(1)
 }
 
-// Load signature positions config
 const configPath = path.join(ROOT, 'config', 'signature-positions.json')
 const sigConfig = JSON.parse(fs.readFileSync(configPath, 'utf-8'))
 
 const outputDir = path.join(__dirname, 'calibration-output')
 if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir, { recursive: true })
+
+// --- Document types and template mappings ---
+
+// All document types to calibrate
+const DOCUMENT_TYPES = [
+  'labor_contract',
+  'personal_info_consent',
+  'holiday_extension',
+  'data_security_pledge',
+  'compliance',
+  'overtime_work',
+]
+
+// Template sheet name overrides (must match lib/sheets/template.ts)
+const SHEET_NAME_OVERRIDES = {
+  personal_info_consent: 'TPL_personal_informaion',
+}
+
+// Page breaks matching production (lib/sheets/template.ts PAGE_BREAK_ROWS)
+const PAGE_BREAK_ROWS = {
+  labor_contract_monthly: [57],
+  labor_contract_daily: [51],
+  compliance: [49],
+  personal_info_consent: [30, 50],
+}
+
+// Production export config (must match lib/sheets/template.ts RANGE_PAGE_CONFIG)
+const RANGE_PAGE_CONFIG = {
+  scale: '4',
+  top_margin: '0.15',
+  bottom_margin: '0.15',
+  left_margin: '0.15',
+  right_margin: '0.15',
+}
 
 // --- Google API helpers ---
 
@@ -76,37 +112,60 @@ async function getSheetGid(sheetName) {
   return sheet.properties.sheetId
 }
 
-async function exportSheetTabAsPdf(gid) {
+async function exportPdf(gid, config = {}, range = null) {
   const auth = getAuth()
   const { token } = await auth.getAccessToken()
   if (!token) throw new Error('Failed to get access token')
 
+  const cfg = { scale: '4', top_margin: '0.25', bottom_margin: '0.25', left_margin: '0.25', right_margin: '0.25', ...config }
   const params = new URLSearchParams({
-    format: 'pdf',
-    gid: String(gid),
-    size: 'A4',
-    portrait: 'true',
-    scale: '2',
-    gridlines: 'false',
-    printtitle: 'false',
-    sheetnames: 'false',
-    fzr: 'false',
-    top_margin: '0.25',
-    bottom_margin: '0.25',
-    left_margin: '0.25',
-    right_margin: '0.25',
+    format: 'pdf', gid: String(gid), size: 'A4', portrait: 'true',
+    scale: cfg.scale, gridlines: 'false', printtitle: 'false',
+    sheetnames: 'false', fzr: 'false',
+    top_margin: cfg.top_margin, bottom_margin: cfg.bottom_margin,
+    left_margin: cfg.left_margin, right_margin: cfg.right_margin,
   })
 
-  const exportUrl = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/export?${params.toString()}`
-  const response = await fetch(exportUrl, {
-    headers: { Authorization: `Bearer ${token}` },
-  })
+  if (range) {
+    params.set('ir', 'false')
+    params.set('ic', 'false')
+    params.set('r1', String(range.r1))
+    params.set('r2', String(range.r2))
+    params.set('c1', String(range.c1 ?? 0))
+    params.set('c2', String(range.c2 ?? 20))
+  }
 
+  const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/export?${params.toString()}`
+  const response = await fetch(url, { headers: { Authorization: `Bearer ${token}` } })
   if (!response.ok) {
     throw new Error(`PDF export failed: ${response.status} ${response.statusText}`)
   }
-
   return Buffer.from(await response.arrayBuffer())
+}
+
+// --- Merge multiple page buffers (matching lib/pdf/page-merge.ts) ---
+
+async function mergePdfPages(pageBuffers) {
+  const merged = await PDFDocument.create()
+  for (const buf of pageBuffers) {
+    const doc = await PDFDocument.load(buf)
+    const [page] = await merged.copyPages(doc, [0])
+    merged.addPage(page)
+  }
+  return Buffer.from(await merged.save())
+}
+
+// --- Build page ranges from break rows ---
+
+function buildPageRanges(breakRows) {
+  const ranges = []
+  let startRow = 0
+  for (const breakRow of breakRows) {
+    ranges.push({ r1: startRow, r2: breakRow })
+    startRow = breakRow
+  }
+  ranges.push({ r1: startRow, r2: 200 })
+  return ranges
 }
 
 // --- Employee lookup ---
@@ -127,14 +186,23 @@ async function getFirstEmployee() {
   return emp
 }
 
-// --- Template fill & PDF generation ---
+// --- Generate PDF for any document type ---
 
-async function generateLaborContractPdf(employee) {
+async function generateDocumentPdf(documentKey, employee) {
   const paySec = employee.pay_sec || 'monthly'
   const suffix = paySec === 'daily' ? 'daily' : 'monthly'
-  const templateSheetName = `TPL_labor_contract_${suffix}`
-  const workSheetName = `WORK_calibration_${Date.now()}`
 
+  // Resolve template sheet name
+  let templateSheetName
+  if (SHEET_NAME_OVERRIDES[documentKey]) {
+    templateSheetName = SHEET_NAME_OVERRIDES[documentKey]
+  } else if (documentKey === 'labor_contract') {
+    templateSheetName = `TPL_labor_contract_${suffix}`
+  } else {
+    templateSheetName = `TPL_${documentKey}`
+  }
+
+  const workSheetName = `WORK_cal_${documentKey}_${Date.now()}`
   const sheets = getSheetsClient()
 
   // Copy template sheet
@@ -159,12 +227,12 @@ async function generateLaborContractPdf(employee) {
     },
   })
 
-  // Read values, fill placeholders
+  // Read and fill placeholders
   const readResult = await sheets.spreadsheets.values.get({
     spreadsheetId: SPREADSHEET_ID,
     range: `${workSheetName}!A:Z`,
   })
-  const data = (readResult.data.values ?? [])
+  const data = readResult.data.values ?? []
 
   const today = new Date()
   const pad = (n) => String(n).padStart(2, '0')
@@ -175,14 +243,15 @@ async function generateLaborContractPdf(employee) {
     position: employee.position || '',
     hire_date: employee.hire_date || '',
     adrress: employee.address || '',
+    address: employee.address || '',
     birthday: employee.birthday || '',
+    phone: employee.phone || '',
     date_yy: String(today.getFullYear()),
     date_mm: pad(today.getMonth() + 1),
     date_dd: pad(today.getDate()),
-    signature: '',  // No text signature — only image
+    signature: '',
   }
 
-  // Try to parse hire_date
   try {
     const parts = (employee.hire_date || '').replace(/[^0-9.]/g, '').split('.')
     variables.hire_date_yy = parts[0] || String(today.getFullYear())
@@ -200,21 +269,40 @@ async function generateLaborContractPdf(employee) {
     })
   )
 
-  // Write back
   if (filledData.length > 0) {
     await sheets.spreadsheets.values.update({
       spreadsheetId: SPREADSHEET_ID,
       range: `${workSheetName}!A1`,
-      valueInputOption: 'USER_ENTERED',
+      valueInputOption: 'RAW',
       requestBody: { values: filledData },
     })
   }
 
-  // Export PDF
-  const workGid = await getSheetGid(workSheetName)
-  const pdfBuffer = await exportSheetTabAsPdf(workGid)
+  // Wait for sheet to be ready
+  await new Promise(r => setTimeout(r, 1000))
 
-  // Cleanup work sheet
+  // Export PDF using production-matching parameters
+  const workGid = await getSheetGid(workSheetName)
+  const templateKey = documentKey === 'labor_contract'
+    ? `labor_contract_${suffix}` : documentKey
+  const breakRows = PAGE_BREAK_ROWS[templateKey]
+
+  let pdfBuffer
+  if (breakRows) {
+    // Multi-page: export each row range separately, then merge (matches production)
+    const ranges = buildPageRanges(breakRows)
+    const pageBuffers = []
+    for (const range of ranges) {
+      const buf = await exportPdf(workGid, RANGE_PAGE_CONFIG, range)
+      pageBuffers.push(buf)
+    }
+    pdfBuffer = await mergePdfPages(pageBuffers)
+  } else {
+    // Single page with range-based export (matches production)
+    pdfBuffer = await exportPdf(workGid, RANGE_PAGE_CONFIG, { r1: 0, r2: 200 })
+  }
+
+  // Cleanup
   await sheets.spreadsheets.batchUpdate({
     spreadsheetId: SPREADSHEET_ID,
     requestBody: {
@@ -222,99 +310,76 @@ async function generateLaborContractPdf(employee) {
     },
   }).catch(() => {})
 
-  return { pdfBuffer, paySec: suffix }
+  return { pdfBuffer, configKey: templateKey }
 }
 
 // --- Draw calibration markers ---
 
 function drawCalibrationMarker(page, pos, label) {
-  // Red rectangle with transparency
   page.drawRectangle({
-    x: pos.x,
-    y: pos.y,
-    width: pos.width,
-    height: pos.height,
-    borderColor: rgb(1, 0, 0),
-    borderWidth: 2,
-    color: rgb(1, 0, 0),
-    opacity: 0.15,
+    x: pos.x, y: pos.y, width: pos.width, height: pos.height,
+    borderColor: rgb(1, 0, 0), borderWidth: 2,
+    color: rgb(1, 0, 0), opacity: 0.15,
   })
-
-  // Crosshair
   const cx = pos.x + pos.width / 2
   const cy = pos.y + pos.height / 2
-  page.drawLine({
-    start: { x: cx - 20, y: cy },
-    end: { x: cx + 20, y: cy },
-    color: rgb(1, 0, 0),
-    thickness: 1,
-  })
-  page.drawLine({
-    start: { x: cx, y: cy - 20 },
-    end: { x: cx, y: cy + 20 },
-    color: rgb(1, 0, 0),
-    thickness: 1,
-  })
-
-  // Label
-  page.drawText(label, {
-    x: pos.x,
-    y: pos.y + pos.height + 5,
-    size: 8,
-    color: rgb(1, 0, 0),
-  })
+  page.drawLine({ start: { x: cx - 20, y: cy }, end: { x: cx + 20, y: cy }, color: rgb(1, 0, 0), thickness: 1 })
+  page.drawLine({ start: { x: cx, y: cy - 20 }, end: { x: cx, y: cy + 20 }, color: rgb(1, 0, 0), thickness: 1 })
+  page.drawText(label, { x: pos.x, y: pos.y + pos.height + 5, size: 8, color: rgb(1, 0, 0) })
 }
 
 // --- Main ---
 
 async function main() {
-  console.log('=== Sheets-based Signature Calibration ===\n')
+  console.log('=== Sheets-based Signature Calibration (All Documents) ===')
+  console.log(`Export config: scale=${RANGE_PAGE_CONFIG.scale}, margins=${RANGE_PAGE_CONFIG.top_margin}\n`)
 
-  // Get first employee for template filling
   const employee = await getFirstEmployee()
   console.log(`Using employee: ${employee.name} (${employee.employee_id})`)
   console.log(`Pay section: ${employee.pay_sec || 'monthly'}\n`)
 
-  // Generate labor contract PDF from Sheets
-  console.log('Generating labor contract PDF from Sheets...')
-  const { pdfBuffer, paySec } = await generateLaborContractPdf(employee)
+  for (const documentKey of DOCUMENT_TYPES) {
+    console.log(`--- ${documentKey} ---`)
+    try {
+      const { pdfBuffer, configKey } = await generateDocumentPdf(documentKey, employee)
 
-  // Also save the raw (unmarked) PDF for reference
-  const rawPath = path.join(outputDir, `sheets_labor_contract_${paySec}_raw.pdf`)
-  fs.writeFileSync(rawPath, pdfBuffer)
-  console.log(`Raw PDF saved: ${rawPath}`)
+      // Save raw PDF
+      const rawPath = path.join(outputDir, `sheets_${configKey}_raw.pdf`)
+      fs.writeFileSync(rawPath, pdfBuffer)
+      console.log(`  Raw: ${rawPath}`)
 
-  // Load and mark with calibration markers
-  const pdfDoc = await PDFDocument.load(pdfBuffer)
-  const pages = pdfDoc.getPages()
-  console.log(`PDF has ${pages.length} page(s)`)
+      // Load and draw markers
+      const pdfDoc = await PDFDocument.load(pdfBuffer)
+      const pages = pdfDoc.getPages()
+      console.log(`  Pages: ${pages.length}`)
+      pages.forEach((p, i) => {
+        const { width, height } = p.getSize()
+        console.log(`    Page ${i}: ${width.toFixed(1)} x ${height.toFixed(1)} pt`)
+      })
 
-  // Print page sizes
-  pages.forEach((p, i) => {
-    const { width, height } = p.getSize()
-    console.log(`  Page ${i}: ${width.toFixed(1)} x ${height.toFixed(1)} pt`)
-  })
+      // Get signature positions for this document
+      const positions = sigConfig[configKey] ?? sigConfig[documentKey]
+      const posArr = Array.isArray(positions) ? positions : positions ? [positions] : []
 
-  // Try all labor contract config keys
-  const configKeys = [`labor_contract_${paySec}`, 'labor_contract']
-  for (const key of configKeys) {
-    const pos = sigConfig[key]
-    if (!pos) continue
+      for (let i = 0; i < posArr.length; i++) {
+        const pos = posArr[i]
+        if (pos.page < pages.length) {
+          drawCalibrationMarker(pages[pos.page], pos, `#${i + 1} (p${pos.page})`)
+          console.log(`  Marker #${i + 1}: page=${pos.page}, x=${pos.x}, y=${pos.y}, w=${pos.width}, h=${pos.height}`)
+        } else {
+          console.log(`  [WARN] #${i + 1}: page ${pos.page} does not exist!`)
+        }
+      }
 
-    if (pos.page < pages.length) {
-      drawCalibrationMarker(pages[pos.page], pos, `${key} (p${pos.page})`)
-      console.log(`\nMarker drawn for "${key}": page=${pos.page}, x=${pos.x}, y=${pos.y}, w=${pos.width}, h=${pos.height}`)
-    } else {
-      console.log(`\n[WARN] "${key}": page ${pos.page} does not exist!`)
+      const outPath = path.join(outputDir, `sheets_${configKey}_calibrated.pdf`)
+      fs.writeFileSync(outPath, await pdfDoc.save())
+      console.log(`  Calibrated: ${outPath}\n`)
+    } catch (err) {
+      console.error(`  [ERROR] ${documentKey}: ${err.message}\n`)
     }
   }
 
-  // Save calibrated PDF
-  const outPath = path.join(outputDir, `sheets_labor_contract_${paySec}_calibrated.pdf`)
-  const savedBytes = await pdfDoc.save()
-  fs.writeFileSync(outPath, savedBytes)
-  console.log(`\nCalibrated PDF saved: ${outPath}`)
-  console.log('\nDone! Open the PDF to check if the red marker is on the signature line.')
+  console.log('Done! Open calibrated PDFs to verify red markers are on signature lines.')
 }
 
 main().catch((err) => {

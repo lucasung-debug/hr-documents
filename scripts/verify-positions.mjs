@@ -19,9 +19,9 @@ const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'))
 const outputDir = path.join(__dirname, 'calibration-output')
 
 const docs = [
-  'labor_contract_monthly', 'labor_contract_daily',
-  'personal_info_consent', 'bank_account', 'health_certificate',
-  'criminal_check_consent', 'emergency_contact', 'data_security_pledge',
+  'labor_contract', 'labor_contract_monthly', 'labor_contract_daily',
+  'personal_info_consent', 'holiday_extension',
+  'data_security_pledge', 'compliance', 'overtime_work',
 ]
 
 function drawMarker(page, pos, label) {

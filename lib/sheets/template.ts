@@ -318,11 +318,20 @@ async function exportWithRetry(
       const errMsg = String((err as { message?: unknown })?.message ?? err)
       const errStatus = (err as { status?: number; code?: number })?.status ??
         (err as { status?: number; code?: number })?.code
-      const isNotFound = errStatus === 400 || errStatus === 404 ||
+
+      // Fatal errors: don't retry
+      const isForbidden = errStatus === 403 || errMsg.includes('403')
+      if (isForbidden) throw err
+
+      // Retryable: 400/404 = sheet not yet recognized by export endpoint
+      const isRetryable = errStatus === 400 || errStatus === 404 ||
         errMsg.includes('400') || errMsg.includes('404')
-      if (!isNotFound || attempt >= maxRetries - 1) throw err
-      console.warn(`[exportWithRetry] Attempt ${attempt + 1} failed, retrying in ${(attempt + 1)}s...`)
-      await new Promise(r => setTimeout(r, (attempt + 1) * 1000))
+      if (!isRetryable || attempt >= maxRetries - 1) throw err
+
+      // Exponential backoff: 1s, 2s, 4s
+      const delay = Math.pow(2, attempt) * 1000
+      console.warn(`[exportWithRetry] Attempt ${attempt + 1} failed, retrying in ${delay}ms...`)
+      await new Promise(r => setTimeout(r, delay))
     }
   }
   throw new Error('exportWithRetry: unreachable')

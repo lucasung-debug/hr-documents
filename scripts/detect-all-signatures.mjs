@@ -52,14 +52,23 @@ async function getSheetGid(name) {
   return s.properties.sheetId
 }
 
-async function exportPdf(gid) {
+async function exportPdf(gid, range = null) {
   const { token } = await getAuth().getAccessToken()
+  // Match production export parameters (lib/sheets/template.ts RANGE_PAGE_CONFIG)
   const params = new URLSearchParams({
     format: 'pdf', gid: String(gid), size: 'A4', portrait: 'true',
-    scale: '2', gridlines: 'false', printtitle: 'false', sheetnames: 'false',
-    fzr: 'false', top_margin: '0.25', bottom_margin: '0.25',
-    left_margin: '0.25', right_margin: '0.25',
+    scale: '4', gridlines: 'false', printtitle: 'false', sheetnames: 'false',
+    fzr: 'false', top_margin: '0.15', bottom_margin: '0.15',
+    left_margin: '0.15', right_margin: '0.15',
   })
+  if (range) {
+    params.set('ir', 'false')
+    params.set('ic', 'false')
+    params.set('r1', String(range.r1))
+    params.set('r2', String(range.r2))
+    params.set('c1', String(range.c1 ?? 0))
+    params.set('c2', String(range.c2 ?? 20))
+  }
   const res = await fetch(
     `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/export?${params}`,
     { headers: { Authorization: `Bearer ${token}` } }

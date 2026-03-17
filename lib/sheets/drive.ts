@@ -108,14 +108,23 @@ export async function exportSheetTabAsPdf(
   try {
     const result = execFileSync('node', ['-e', script, exportUrl, token], {
       maxBuffer: 20 * 1024 * 1024, // 20MB
-      timeout: 30000,
+      timeout: 45000,
     })
     return Buffer.from(result)
   } catch (err: unknown) {
-    const execErr = err as { stderr?: Buffer; status?: number }
+    const execErr = err as { stderr?: Buffer; status?: number; code?: string }
     const stderrText = execErr.stderr?.toString('utf-8').slice(0, 500) ?? 'unknown error'
-    throw new Error(
-      `Sheets PDF export failed (subprocess): gid=${sheetGid}\n${stderrText}`
-    )
+
+    // Parse HTTP status from stderr (format: "STATUS=xxx ...")
+    const statusMatch = stderrText.match(/STATUS=(\d+)/)
+    const httpStatus = statusMatch ? parseInt(statusMatch[1], 10) : undefined
+
+    // Propagate status code for upstream retry logic
+    const exportErr = new Error(
+      `Sheets PDF export failed (subprocess): gid=${sheetGid}, status=${httpStatus ?? 'unknown'}\n${stderrText}`
+    ) as Error & { status?: number; code?: string }
+    if (httpStatus) exportErr.status = httpStatus
+    if (execErr.code === 'ETIMEDOUT') exportErr.code = 'ETIMEDOUT'
+    throw exportErr
   }
 }

@@ -55,11 +55,23 @@ export async function GET(request: NextRequest) {
     }
 
     // Generate PDF from Sheets template (pay_sec selects monthly/daily)
-    const pdfBuffer = await generatePdfFromTemplate(
-      documentKey,
-      variables,
-      employee.pay_sec
-    )
+    // Retry once on transient Sheets API failures
+    let pdfBuffer: Buffer
+    try {
+      pdfBuffer = await generatePdfFromTemplate(
+        documentKey,
+        variables,
+        employee.pay_sec
+      )
+    } catch (firstErr) {
+      log.warn({ err: firstErr }, `미리보기 첫 시도 실패, 재시도 중: ${documentKey}`)
+      pdfBuffer = await generatePdfFromTemplate(
+        documentKey,
+        variables,
+        employee.pay_sec
+      )
+    }
+
     const pdfBase64 = pdfBuffer.toString('base64')
 
     return NextResponse.json({
