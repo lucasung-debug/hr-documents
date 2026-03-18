@@ -25,9 +25,9 @@ export function PdfCanvasViewer({ pdfBase64, className }: PdfCanvasViewerProps) 
     try {
       const pdfjsLib = await import('pdfjs-dist')
 
-      // Configure worker (use CDN for simplicity — avoids build config issues)
+      // Configure worker (local file — CDN may not have this exact version)
       if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
-        pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`
+        pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
       }
 
       // Decode base64 to binary

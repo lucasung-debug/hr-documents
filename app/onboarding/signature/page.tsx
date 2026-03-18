@@ -10,7 +10,7 @@ import { apiFetch } from '@/lib/api/client-fetch'
 
 export default function SignaturePage() {
   const router = useRouter()
-  const { employeeName, setSignHash } = useSession()
+  const { employeeName, setSignHash, setSignatureBase64 } = useSession()
 
   const [capturedDataUrl, setCapturedDataUrl] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -45,6 +45,7 @@ export default function SignaturePage() {
       }
 
       setSignHash(data.signHash)
+      setSignatureBase64(capturedDataUrl)
       router.push('/onboarding/documents')
     } catch {
       setError('네트워크 오류가 발생했습니다.')

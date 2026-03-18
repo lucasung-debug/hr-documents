@@ -77,7 +77,7 @@ async function sendWithRetry(
 
 export async function sendOnboardingEmails(
   employee: EmployeeMasterRow,
-  documentKeys: DocumentKey[]
+  attachmentsOrKeys: AttachmentInfo[] | DocumentKey[]
 ): Promise<{ sentAt: string }> {
   if (!employee.email?.trim()) {
     throw new Error(`근로자 이메일 주소가 없습니다: ${employee.employee_id}`)
@@ -88,7 +88,10 @@ export async function sendOnboardingEmails(
     throw new Error('HR_EMAIL_RECIPIENTS 환경변수가 설정되지 않았습니다')
   }
 
-  const attachments = buildAttachments(employee, documentKeys)
+  // Accept pre-built attachments or document keys (legacy: reads from /tmp)
+  const attachments: AttachmentInfo[] = Array.isArray(attachmentsOrKeys) && attachmentsOrKeys.length > 0 && typeof attachmentsOrKeys[0] === 'object' && 'content' in (attachmentsOrKeys[0] as object)
+    ? attachmentsOrKeys as AttachmentInfo[]
+    : buildAttachments(employee, attachmentsOrKeys as DocumentKey[])
 
   // Check total attachment size
   const totalBytes = attachments.reduce((sum, a) => sum + a.content.length, 0)

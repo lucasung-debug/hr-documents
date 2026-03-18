@@ -22,12 +22,20 @@ export const docConsentSchema = z.object({
   documentKey: z.enum(DOCUMENT_KEYS, {
     errorMap: () => ({ message: '유효하지 않은 서류 키입니다' }),
   }),
+  signatureBase64: z
+    .string()
+    .refine((val) => val.startsWith('data:image/png;base64,'), 'PNG 형식이어야 합니다')
+    .optional(),
 })
 
 export const generatePdfSchema = z.object({
   documentKey: z.enum(DOCUMENT_KEYS, {
     errorMap: () => ({ message: '유효하지 않은 서류 키입니다' }),
   }),
+  signatureBase64: z
+    .string()
+    .refine((val) => val.startsWith('data:image/png;base64,'), 'PNG 형식이어야 합니다')
+    .optional(),
 })
 
 export type LoginInput = z.infer<typeof loginSchema>

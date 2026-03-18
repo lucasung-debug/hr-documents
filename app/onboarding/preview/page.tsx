@@ -5,26 +5,27 @@ import { useRouter } from 'next/navigation'
 import { DOCUMENT_KEYS, DOCUMENT_LABELS } from '@/types/document'
 import type { DocumentKey } from '@/types/document'
 import { Button } from '@/components/ui/Button'
+import { PdfCanvasViewer } from '@/components/documents/PdfCanvasViewer'
+import { useSession } from '@/components/providers/SessionProvider'
 import { apiFetch } from '@/lib/api/client-fetch'
 import { getCachedPreview, setCachedPreview } from '@/lib/api/preview-cache'
 
 interface PreviewItem {
   key: DocumentKey
   label: string
-  previewUrl: string | null
-  previewType: 'png' | 'pdf' | null
+  pdfBase64: string | null
   loading: boolean
   error: string | null
 }
 
 export default function PreviewPage() {
   const router = useRouter()
+  const { signatureBase64 } = useSession()
   const [previews, setPreviews] = useState<PreviewItem[]>(
     DOCUMENT_KEYS.map((key) => ({
       key,
       label: DOCUMENT_LABELS[key],
-      previewUrl: null,
-      previewType: null,
+      pdfBase64: null,
       loading: true,
       error: null,
     }))
@@ -38,7 +39,7 @@ export default function PreviewPage() {
       setPreviews((prev) =>
         prev.map((p) =>
           p.key === key
-            ? { ...p, previewUrl: cached.previewUrl, previewType: cached.previewType, loading: false, error: null }
+            ? { ...p, pdfBase64: cached.previewUrl, loading: false, error: null }
             : p
         )
       )
@@ -52,21 +53,22 @@ export default function PreviewPage() {
       const res = await apiFetch('/api/docs/generate-pdf', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ documentKey: key }),
+        body: JSON.stringify({ documentKey: key, signatureBase64 }),
       })
       const data = await res.json()
       if (!res.ok) {
         throw new Error(data.error ?? '미리보기 생성에 실패했습니다.')
       }
       const url = data.previewUrl ?? null
-      const type = data.previewType ?? 'pdf'
       if (url) {
-        setCachedPreview(key, url, type)
+        setCachedPreview(key, url, 'pdf')
       }
+      // Extract base64 from data URL
+      const base64 = url?.replace(/^data:application\/pdf;base64,/, '') ?? null
       setPreviews((prev) =>
         prev.map((p) =>
           p.key === key
-            ? { ...p, previewUrl: url, previewType: type, loading: false, error: null }
+            ? { ...p, pdfBase64: base64, loading: false, error: null }
             : p
         )
       )
@@ -83,7 +85,7 @@ export default function PreviewPage() {
         )
       )
     }
-  }, [])
+  }, [signatureBase64])
 
   useEffect(() => {
     // Parallel loading for all documents
@@ -120,7 +122,7 @@ export default function PreviewPage() {
                 `}
               >
                 <span className="flex items-center gap-2">
-                  {!p.loading && p.previewUrl && (
+                  {!p.loading && p.pdfBase64 && (
                     <svg className="w-3.5 h-3.5 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                     </svg>
@@ -162,23 +164,11 @@ export default function PreviewPage() {
                     다시 시도
                   </Button>
                 </div>
-              ) : current?.previewUrl ? (
-                current.previewType === 'pdf' ? (
-                  <object
-                    data={current.previewUrl}
-                    type="application/pdf"
-                    className="w-full h-[50vh] sm:h-[60vh] lg:h-[600px]"
-                  >
-                    <iframe
-                      src={current.previewUrl}
-                      className="w-full border-0 h-[50vh] sm:h-[60vh] lg:h-[600px]"
-                      title={current.label}
-                    />
-                  </object>
-                ) : (
-                  /* eslint-disable-next-line @next/next/no-img-element */
-                  <img src={current.previewUrl} alt={current.label} className="max-w-full h-auto" />
-                )
+              ) : current?.pdfBase64 ? (
+                <PdfCanvasViewer
+                  pdfBase64={current.pdfBase64}
+                  className="w-full rounded-apple h-[50vh] sm:h-[60vh] lg:h-[600px] overflow-y-auto"
+                />
               ) : (
                 <p className="text-sm text-apple-gray-500 flex items-center">미리보기를 불러올 수 없습니다.</p>
               )}

@@ -4,10 +4,12 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { SendConfirmModal } from '@/components/email/SendConfirmModal'
 import { Button } from '@/components/ui/Button'
+import { useSession } from '@/components/providers/SessionProvider'
 import { apiFetch } from '@/lib/api/client-fetch'
 
 export default function CompletePage() {
   const router = useRouter()
+  const { signatureBase64 } = useSession()
   const [modalOpen, setModalOpen] = useState(false)
   const [sending, setSending] = useState(false)
   const [sent, setSent] = useState(false)
@@ -21,7 +23,11 @@ export default function CompletePage() {
     setSending(true)
     setError('')
     try {
-      const res = await apiFetch('/api/email/send', { method: 'POST' })
+      const res = await apiFetch('/api/email/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ signatureBase64 }),
+      })
       const data = await res.json()
 
       if (!res.ok) {
