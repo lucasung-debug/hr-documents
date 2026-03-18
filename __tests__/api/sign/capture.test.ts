@@ -7,6 +7,7 @@ import zlib from 'zlib'
 // Mock all external dependencies
 jest.mock('@/lib/sheets/employee')
 jest.mock('@/lib/sheets/template-variables')
+jest.mock('@/lib/pdf/generate-pdf')
 jest.mock('@/lib/sheets/template')
 jest.mock('@/lib/pdf/signature-config')
 jest.mock('@/lib/storage/temp-files')
@@ -27,7 +28,7 @@ jest.mock('@/lib/api', () => ({
 
 import { getEmployeeById } from '@/lib/sheets/employee'
 import { buildBaseVariables } from '@/lib/sheets/template-variables'
-import { generatePdfFromTemplate } from '@/lib/sheets/template'
+import { generatePdf } from '@/lib/pdf/generate-pdf'
 import { getSignaturePositionConfig } from '@/lib/pdf/signature-config'
 import { writeSignature, ensureSessionDir, getPdfPath } from '@/lib/storage/temp-files'
 import { base64DataUrlToBuffer, sha256 } from '@/lib/crypto/hash'
@@ -129,7 +130,7 @@ describe('sign/capture — personal_info_consent regeneration', () => {
       rowIndex: 2,
     })
     ;(buildBaseVariables as jest.Mock).mockReturnValue({ name: '홍길동' })
-    ;(generatePdfFromTemplate as jest.Mock).mockResolvedValue(pdfBytes)
+    ;(generatePdf as jest.Mock).mockResolvedValue(pdfBytes)
     ;(getSignaturePositionConfig as jest.Mock).mockReturnValue({
       personal_info_consent: { page: 2, x: 466, y: 260, width: 40, height: 13 },
     })
@@ -137,10 +138,13 @@ describe('sign/capture — personal_info_consent regeneration', () => {
     const response = await POST(makeRequest('EMP001'))
     const json = await response.json()
 
+    // Wait for fire-and-forget async block to complete
+    await new Promise(r => setTimeout(r, 100))
+
     expect(json.success).toBe(true)
     expect(getEmployeeById).toHaveBeenCalledWith('EMP001')
     expect(buildBaseVariables).toHaveBeenCalled()
-    expect(generatePdfFromTemplate).toHaveBeenCalledWith('personal_info_consent', { name: '홍길동' })
+    expect(generatePdf).toHaveBeenCalledWith('personal_info_consent', { name: '홍길동' })
     expect(ensureSessionDir).toHaveBeenCalledWith('EMP001')
     expect(fs.writeFileSync).toHaveBeenCalled()
 

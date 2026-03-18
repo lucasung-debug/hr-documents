@@ -1,0 +1,127 @@
+{
+  "_comment": "Text overlay positions for local PDF generation. Y-axis origin = BOTTOM (pdf-lib). A4 = 595×842pt. Coordinates calibrated from example_template_print PDFs. Use scripts/text-position-calibration.html to fine-tune.",
+  "_fonts": {
+    "regular": "assets/fonts/NanumGothic.ttf",
+    "bold": "assets/fonts/NanumGothicBold.ttf"
+  },
+  "labor_contract_monthly": {
+    "fields": [
+      { "key": "employee_name", "page": 0, "x": 312, "y": 795, "fontSize": 10 },
+      { "key": "position", "page": 0, "x": 175, "y": 742, "fontSize": 9 },
+      { "key": "hire_date_yy", "page": 0, "x": 176, "y": 703, "fontSize": 9 },
+      { "key": "hire_date_mm", "page": 0, "x": 220, "y": 703, "fontSize": 9 },
+      { "key": "hire_date_dd", "page": 0, "x": 260, "y": 703, "fontSize": 9 },
+      { "key": "salary_total", "page": 0, "x": 175, "y": 380, "fontSize": 9 },
+      { "key": "salary_basic", "page": 0, "x": 220, "y": 340, "fontSize": 9 },
+      { "key": "salary_OT", "page": 0, "x": 350, "y": 340, "fontSize": 9 },
+      { "key": "salary_fix", "page": 0, "x": 480, "y": 340, "fontSize": 9 },
+      { "key": "intern_date_yy", "page": 1, "x": 210, "y": 575, "fontSize": 9 },
+      { "key": "intern_date_mm", "page": 1, "x": 260, "y": 575, "fontSize": 9 },
+      { "key": "intern_date_dd", "page": 1, "x": 300, "y": 575, "fontSize": 9 },
+      { "key": "date_yy", "page": 1, "x": 218, "y": 228, "fontSize": 9 },
+      { "key": "date_mm", "page": 1, "x": 262, "y": 228, "fontSize": 9 },
+      { "key": "date_dd", "page": 1, "x": 300, "y": 228, "fontSize": 9 },
+      { "key": "address", "page": 1, "x": 350, "y": 195, "fontSize": 9 },
+      { "key": "birthday", "page": 1, "x": 350, "y": 180, "fontSize": 9 },
+      { "key": "employee_name", "page": 1, "x": 350, "y": 165, "fontSize": 9 }
+    ],
+    "checkboxes": [
+      { "key": "work_hours_daytime", "page": 0, "x": 194, "y": 620, "size": 8, "conditionKey": "work_hours", "conditionValue": "주간" },
+      { "key": "work_hours_2shift", "page": 0, "x": 274, "y": 620, "size": 8, "conditionKey": "work_hours", "conditionValue": "2교대" }
+    ]
+  },
+  "labor_contract_daily": {
+    "fields": [
+      { "key": "employee_name", "page": 0, "x": 312, "y": 795, "fontSize": 10 },
+      { "key": "position", "page": 0, "x": 175, "y": 742, "fontSize": 9 },
+      { "key": "hire_date_yy", "page": 0, "x": 176, "y": 703, "fontSize": 9 },
+      { "key": "hire_date_mm", "page": 0, "x": 220, "y": 703, "fontSize": 9 },
+      { "key": "hire_date_dd", "page": 0, "x": 260, "y": 703, "fontSize": 9 },
+      { "key": "salary_total", "page": 0, "x": 175, "y": 380, "fontSize": 9 },
+      { "key": "salary_basic", "page": 0, "x": 220, "y": 340, "fontSize": 9 },
+      { "key": "salary_OT", "page": 0, "x": 350, "y": 340, "fontSize": 9 },
+      { "key": "salary_fix", "page": 0, "x": 480, "y": 340, "fontSize": 9 },
+      { "key": "intern_date_yy", "page": 1, "x": 210, "y": 575, "fontSize": 9 },
+      { "key": "intern_date_mm", "page": 1, "x": 260, "y": 575, "fontSize": 9 },
+      { "key": "intern_date_dd", "page": 1, "x": 300, "y": 575, "fontSize": 9 },
+      { "key": "date_yy", "page": 1, "x": 218, "y": 228, "fontSize": 9 },
+      { "key": "date_mm", "page": 1, "x": 262, "y": 228, "fontSize": 9 },
+      { "key": "date_dd", "page": 1, "x": 300, "y": 228, "fontSize": 9 },
+      { "key": "address", "page": 1, "x": 350, "y": 195, "fontSize": 9 },
+      { "key": "birthday", "page": 1, "x": 350, "y": 180, "fontSize": 9 },
+      { "key": "employee_name", "page": 1, "x": 350, "y": 165, "fontSize": 9 }
+    ],
+    "checkboxes": [
+      { "key": "work_hours_daytime", "page": 0, "x": 194, "y": 620, "size": 8, "conditionKey": "work_hours", "conditionValue": "주간" },
+      { "key": "work_hours_2shift", "page": 0, "x": 274, "y": 620, "size": 8, "conditionKey": "work_hours", "conditionValue": "2교대" }
+    ]
+  },
+  "personal_info_consent": {
+    "fields": [
+      { "key": "employee_name", "page": 2, "x": 375, "y": 300, "fontSize": 10 },
+      { "key": "date_yy", "page": 2, "x": 218, "y": 280, "fontSize": 9 },
+      { "key": "date_mm", "page": 2, "x": 262, "y": 280, "fontSize": 9 },
+      { "key": "date_dd", "page": 2, "x": 300, "y": 280, "fontSize": 9 }
+    ],
+    "checkboxes": [
+      { "key": "consent_collect", "page": 2, "x": 145, "y": 480, "size": 8, "conditionKey": "_always", "conditionValue": "true" },
+      { "key": "consent_sensitive", "page": 2, "x": 145, "y": 420, "size": 8, "conditionKey": "_always", "conditionValue": "true" },
+      { "key": "consent_provide", "page": 2, "x": 145, "y": 360, "size": 8, "conditionKey": "_always", "conditionValue": "true" }
+    ]
+  },
+  "holiday_extension": {
+    "fields": [
+      { "key": "employee_name", "page": 0, "x": 285, "y": 730, "fontSize": 10 },
+      { "key": "date_yy", "page": 0, "x": 218, "y": 280, "fontSize": 9 },
+      { "key": "date_mm", "page": 0, "x": 262, "y": 280, "fontSize": 9 },
+      { "key": "date_dd", "page": 0, "x": 300, "y": 280, "fontSize": 9 },
+      { "key": "department", "page": 0, "x": 225, "y": 200, "fontSize": 9 },
+      { "key": "birthday", "page": 0, "x": 225, "y": 185, "fontSize": 9 },
+      { "key": "phone", "page": 0, "x": 225, "y": 170, "fontSize": 9 },
+      { "key": "employee_name", "page": 0, "x": 225, "y": 155, "fontSize": 9 }
+    ],
+    "checkboxes": [
+      { "key": "holiday_agree", "page": 0, "x": 145, "y": 380, "size": 8, "conditionKey": "_always", "conditionValue": "true" }
+    ]
+  },
+  "data_security_pledge": {
+    "fields": [
+      { "key": "date_yy", "page": 0, "x": 218, "y": 115, "fontSize": 9 },
+      { "key": "date_mm", "page": 0, "x": 262, "y": 115, "fontSize": 9 },
+      { "key": "date_dd", "page": 0, "x": 300, "y": 115, "fontSize": 9 },
+      { "key": "department", "page": 0, "x": 350, "y": 95, "fontSize": 9 },
+      { "key": "employee_name", "page": 0, "x": 350, "y": 78, "fontSize": 9 }
+    ],
+    "checkboxes": []
+  },
+  "compliance": {
+    "fields": [
+      { "key": "date_yy", "page": 0, "x": 218, "y": 240, "fontSize": 9 },
+      { "key": "date_mm", "page": 0, "x": 262, "y": 240, "fontSize": 9 },
+      { "key": "date_dd", "page": 0, "x": 300, "y": 240, "fontSize": 9 },
+      { "key": "department", "page": 0, "x": 310, "y": 218, "fontSize": 9 },
+      { "key": "employee_name", "page": 0, "x": 310, "y": 202, "fontSize": 9 }
+    ],
+    "checkboxes": []
+  },
+  "overtime_work": {
+    "fields": [
+      { "key": "hire_date_yy", "page": 0, "x": 195, "y": 620, "fontSize": 9 },
+      { "key": "hire_date_mm", "page": 0, "x": 235, "y": 620, "fontSize": 9 },
+      { "key": "hire_date_dd", "page": 0, "x": 275, "y": 620, "fontSize": 9 },
+      { "key": "position", "page": 0, "x": 135, "y": 660, "fontSize": 9 },
+      { "key": "address", "page": 0, "x": 135, "y": 395, "fontSize": 9 },
+      { "key": "birthday", "page": 0, "x": 135, "y": 400, "fontSize": 9 },
+      { "key": "employee_name", "page": 0, "x": 135, "y": 380, "fontSize": 9 },
+      { "key": "date_yy", "page": 0, "x": 195, "y": 250, "fontSize": 9 },
+      { "key": "date_mm", "page": 0, "x": 235, "y": 250, "fontSize": 9 },
+      { "key": "date_dd", "page": 0, "x": 275, "y": 250, "fontSize": 9 },
+      { "key": "employee_name", "page": 0, "x": 372, "y": 190, "fontSize": 10 }
+    ],
+    "checkboxes": [
+      { "key": "overtime_agree", "page": 0, "x": 47, "y": 530, "size": 8, "conditionKey": "_always", "conditionValue": "true" },
+      { "key": "night_agree", "page": 0, "x": 47, "y": 510, "size": 8, "conditionKey": "_always", "conditionValue": "true" },
+      { "key": "holiday_agree", "page": 0, "x": 47, "y": 490, "size": 8, "conditionKey": "_always", "conditionValue": "true" }
+    ]
+  }
+}

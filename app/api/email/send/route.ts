@@ -8,7 +8,7 @@ import {
 } from '@/lib/sheets/document-status'
 import { sendOnboardingEmails } from '@/lib/email/client'
 import { deleteSessionDir } from '@/lib/storage/temp-files'
-import { generatePdfFromTemplate } from '@/lib/sheets/template'
+import { generatePdf } from '@/lib/pdf/generate-pdf'
 import { getContractConditions } from '@/lib/sheets/contract'
 import { buildBaseVariables, buildContractVariables } from '@/lib/sheets/template-variables'
 import { embedSignatureInPdf } from '@/lib/pdf/embed-signature'
@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
     }
 
     for (const key of DOCUMENT_KEYS) {
-      const pdfBuffer = await generatePdfFromTemplate(key, variables, employee.pay_sec)
+      const pdfBuffer = await generatePdf(key, variables, employee.pay_sec)
 
       let finalPdfBytes: Uint8Array | Buffer = pdfBuffer
       if (sigBuffer) {

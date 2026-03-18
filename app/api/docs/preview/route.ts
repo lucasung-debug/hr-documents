@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { DOCUMENT_KEYS } from '@/types/document'
 import type { DocumentKey } from '@/types/document'
 import { getEmployeeById } from '@/lib/sheets/employee'
-import { generatePdfFromTemplate } from '@/lib/sheets/template'
+import { generatePdf } from '@/lib/pdf/generate-pdf'
 import { getContractConditions } from '@/lib/sheets/contract'
 import { buildBaseVariables, buildContractVariables } from '@/lib/sheets/template-variables'
 import { createLogger } from '@/lib/logger'
@@ -70,14 +70,14 @@ export async function GET(request: NextRequest) {
     // Retry once on transient Sheets API failures
     let pdfBuffer: Buffer
     try {
-      pdfBuffer = await generatePdfFromTemplate(
+      pdfBuffer = await generatePdf(
         documentKey,
         variables,
         employee.pay_sec
       )
     } catch (firstErr) {
       log.warn({ err: firstErr }, `미리보기 첫 시도 실패, 재시도 중: ${documentKey}`)
-      pdfBuffer = await generatePdfFromTemplate(
+      pdfBuffer = await generatePdf(
         documentKey,
         variables,
         employee.pay_sec

@@ -8,7 +8,7 @@ import { createLogger } from '@/lib/logger'
 import { apiFromUnknown } from '@/lib/api'
 import { getEmployeeById } from '@/lib/sheets/employee'
 import { buildBaseVariables } from '@/lib/sheets/template-variables'
-import { generatePdfFromTemplate } from '@/lib/sheets/template'
+import { generatePdf } from '@/lib/pdf/generate-pdf'
 import { getSignaturePositionConfig } from '@/lib/pdf/signature-config'
 
 const log = createLogger('[sign/capture]')
@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
         if (empResult) {
           const { employee } = empResult
           const variables = buildBaseVariables(employee)
-          const pdfBuffer = await generatePdfFromTemplate('personal_info_consent', variables)
+          const pdfBuffer = await generatePdf('personal_info_consent', variables)
           const pdfDoc = await PDFDocument.load(pdfBuffer)
           const pages = pdfDoc.getPages()
           const config = getSignaturePositionConfig()

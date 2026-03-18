@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { docConsentSchema } from '@/lib/validators/input'
 import { readSignature } from '@/lib/storage/temp-files'
-import { generatePdfFromTemplate } from '@/lib/sheets/template'
+import { generatePdf } from '@/lib/pdf/generate-pdf'
 import { getContractConditions } from '@/lib/sheets/contract'
 import { buildBaseVariables, buildContractVariables } from '@/lib/sheets/template-variables'
 import { getEmployeeById } from '@/lib/sheets/employee'
@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
     }
 
     try {
-      await generatePdfFromTemplate(
+      await generatePdf(
         documentKey,
         variables,
         employee.pay_sec
