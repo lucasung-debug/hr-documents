@@ -5,6 +5,11 @@ const nextConfig = {
     instrumentationHook: true,
     serverComponentsExternalPackages: ['pino', 'pino-pretty', 'puppeteer', 'sharp', 'pdf-lib'],
   },
+  webpack: (config) => {
+    // pdfjs-dist uses canvas module (optional, for Node.js) — exclude from client bundles
+    config.resolve.alias.canvas = false
+    return config
+  },
   async headers() {
     return [
       {

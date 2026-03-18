@@ -3,6 +3,10 @@ import { exportSheetTabAsPdf, type PdfExportConfig, type PdfExportRange } from '
 import { mergePdfPages } from '@/lib/pdf/page-merge'
 import type { DocumentKey } from '@/types/document'
 import type { PaySection } from '@/types/employee'
+import { cache } from '@/lib/cache/memory-cache'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('[sheets/template]')
 
 // Template sheet tab names follow: TPL_{documentKey}
 // Labor contract splits into TPL_labor_contract_monthly / _daily
@@ -131,9 +135,7 @@ function resolveCheckboxValues(
       workHoursPairRow = horizontalPairs[1]?.[0]
     }
 
-    console.log('[checkbox] horizontalPairs:', horizontalPairs.map(([r]) => r))
-    console.log('[checkbox] workHoursPairRow:', workHoursPairRow)
-    console.log('[checkbox] work_hours value:', variables.work_hours)
+    log.debug({ horizontalPairs: horizontalPairs.map(([r]) => r), workHoursPairRow, work_hours: variables.work_hours }, 'checkbox resolution')
   }
 
   return positions.map(({ row, col }) => {
@@ -311,6 +313,10 @@ export async function fillTemplate(
  * Get the GID (sheet ID) of a named sheet tab.
  */
 export async function getSheetGid(sheetName: string): Promise<number> {
+  const cacheKey = `sheetGid:${sheetName}`
+  const cached = cache.get<number>(cacheKey)
+  if (cached !== null) return cached
+
   const sheets = getSheetsClient()
   const meta = await withRetry(() =>
     sheets.spreadsheets.get({
@@ -323,10 +329,11 @@ export async function getSheetGid(sheetName: string): Promise<number> {
     (s) => s.properties?.title === sheetName
   )
 
-  if (!sheet?.properties?.sheetId && sheet?.properties?.sheetId !== 0) {
+  if (sheet?.properties?.sheetId == null) {
     throw new Error(`Sheet not found: ${sheetName}`)
   }
 
+  cache.set(cacheKey, sheet.properties.sheetId, 10 * 60 * 1000)
   return sheet.properties.sheetId
 }
 
@@ -334,14 +341,20 @@ export async function getSheetGid(sheetName: string): Promise<number> {
  * Delete a sheet tab by name (used to clean up work sheets).
  */
 export async function deleteSheet(sheetName: string): Promise<void> {
-  const sheets = getSheetsClient()
   const gid = await getSheetGid(sheetName)
+  await deleteSheetById(gid)
+}
 
+/**
+ * Delete a sheet tab by its numeric GID (avoids extra API call when GID is already known).
+ */
+export async function deleteSheetById(sheetId: number): Promise<void> {
+  const sheets = getSheetsClient()
   await withRetry(() =>
     sheets.spreadsheets.batchUpdate({
       spreadsheetId: SPREADSHEET_ID(),
       requestBody: {
-        requests: [{ deleteSheet: { sheetId: gid } }],
+        requests: [{ deleteSheet: { sheetId } }],
       },
     })
   )
@@ -419,7 +432,7 @@ async function exportWithRetry(
 
       // Exponential backoff: 1s, 2s, 4s
       const delay = Math.pow(2, attempt) * 1000
-      console.warn(`[exportWithRetry] Attempt ${attempt + 1} failed, retrying in ${delay}ms...`)
+      log.warn(`exportWithRetry: attempt ${attempt + 1} failed, retrying in ${delay}ms...`)
       await new Promise(r => setTimeout(r, delay))
     }
   }
@@ -465,7 +478,7 @@ export async function generatePdfFromTemplate(
     const fullPageRange: PdfExportRange = { r1: 0, r2: 200 }
     return exportWithRetry(spreadsheetId, gid, RANGE_PAGE_CONFIG, fullPageRange)
   } finally {
-    // Always clean up work sheet
-    await deleteSheet(workSheetName).catch(() => {})
+    // Always clean up work sheet (use GID directly to avoid extra API call)
+    await deleteSheetById(copiedSheetId).catch(() => {})
   }
 }

@@ -14,12 +14,12 @@ export async function DELETE(request: NextRequest) {
 
   try {
     // Delete this session's files
-    const deletedCount = deleteSessionDir(employeeId)
+    deleteSessionDir(employeeId)
 
     // Also trigger a scan of expired sessions
     const expiredCount = cleanupExpiredSessions()
 
-    return NextResponse.json({ deletedCount: deletedCount + expiredCount })
+    return NextResponse.json({ deletedCount: 1 + expiredCount })
   } catch (err) {
     log.error({ err }, '임시 파일 삭제 중 오류가 발생했습니다.')
     return apiFromUnknown(err)

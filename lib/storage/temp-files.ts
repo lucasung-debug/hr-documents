@@ -62,18 +62,13 @@ export function pdfExists(employeeId: string, documentKey: DocumentKey): boolean
   return fs.existsSync(getPdfPath(employeeId, documentKey))
 }
 
-export function deleteSessionDir(employeeId: string): number {
+export function deleteSessionDir(employeeId: string): void {
   const dir = getSessionDir(employeeId)
-  if (!fs.existsSync(dir)) return 0
-
-  let count = 0
-  const files = fs.readdirSync(dir)
-  for (const file of files) {
-    fs.unlinkSync(path.join(dir, file))
-    count++
+  try {
+    fs.rmSync(dir, { recursive: true, force: true })
+  } catch {
+    // Silently ignore ENOENT from concurrent access
   }
-  fs.rmdirSync(dir)
-  return count
 }
 
 export function getSessionDirMtime(employeeId: string): Date | null {

@@ -67,38 +67,41 @@ export async function POST(request: NextRequest) {
     const signHash = sha256(buffer)
     writeSignature(employeeId, buffer)
 
-    // 서명 저장 후 personal_info_consent PDF를 서명 포함하여 재생성
-    try {
-      const empResult = await getEmployeeById(employeeId)
-      if (empResult) {
-        const { employee } = empResult
-        const variables = buildBaseVariables(employee)
-        const pdfBuffer = await generatePdfFromTemplate('personal_info_consent', variables)
-        const pdfDoc = await PDFDocument.load(pdfBuffer)
-        const pages = pdfDoc.getPages()
-        const config = getSignaturePositionConfig()
-        const position = config['personal_info_consent']
-        const positions = Array.isArray(position) ? position : position ? [position] : []
-        if (positions.length > 0) {
-          const sigImage = await pdfDoc.embedPng(buffer)
-          for (const pos of positions) {
-            if (pos.page < pages.length) {
-              pages[pos.page].drawImage(sigImage, {
-                x: pos.x, y: pos.y, width: pos.width, height: pos.height
-              })
+    // 서명 저장 후 personal_info_consent PDF를 서명 포함하여 비동기 재생성 (응답 차단하지 않음)
+    const sigBuffer = Buffer.from(buffer)
+    void (async () => {
+      try {
+        const empResult = await getEmployeeById(employeeId)
+        if (empResult) {
+          const { employee } = empResult
+          const variables = buildBaseVariables(employee)
+          const pdfBuffer = await generatePdfFromTemplate('personal_info_consent', variables)
+          const pdfDoc = await PDFDocument.load(pdfBuffer)
+          const pages = pdfDoc.getPages()
+          const config = getSignaturePositionConfig()
+          const position = config['personal_info_consent']
+          const positions = Array.isArray(position) ? position : position ? [position] : []
+          if (positions.length > 0) {
+            const sigImage = await pdfDoc.embedPng(sigBuffer)
+            for (const pos of positions) {
+              if (pos.page < pages.length) {
+                pages[pos.page].drawImage(sigImage, {
+                  x: pos.x, y: pos.y, width: pos.width, height: pos.height
+                })
+              }
             }
           }
+          const signedBytes = await pdfDoc.save()
+          ensureSessionDir(employeeId)
+          fs.writeFileSync(
+            getPdfPath(employeeId, 'personal_info_consent'),
+            Buffer.from(signedBytes)
+          )
         }
-        const signedBytes = await pdfDoc.save()
-        ensureSessionDir(employeeId)
-        fs.writeFileSync(
-          getPdfPath(employeeId, 'personal_info_consent'),
-          Buffer.from(signedBytes)
-        )
+      } catch (err) {
+        log.warn({ err }, 'personal_info_consent 재생성 실패 (non-fatal)')
       }
-    } catch (err) {
-      log.warn({ err }, 'personal_info_consent 재생성 실패 (non-fatal)')
-    }
+    })()
 
     return NextResponse.json({ success: true, signHash })
   } catch (err) {
