@@ -94,6 +94,15 @@ export async function GET(request: NextRequest) {
       pdfBase64,
     })
   } catch (err) {
+    const errStatus = (err as { status?: number })?.status
+    const errMsg = String((err as { message?: string })?.message ?? '')
+    if (errStatus === 429 || errMsg.includes('429')) {
+      log.warn({ err }, `Google API 429 rate limit: ${documentKey}`)
+      return NextResponse.json(
+        { error: 'Google API 요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' },
+        { status: 429 }
+      )
+    }
     log.error({ err }, `서류 미리보기 생성 중 오류: ${documentKey}`)
     return apiFromUnknown(err)
   }

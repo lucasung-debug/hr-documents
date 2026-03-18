@@ -411,7 +411,7 @@ async function exportWithRetry(
   gid: number,
   config?: Partial<PdfExportConfig>,
   range?: PdfExportRange,
-  maxRetries = 3
+  maxRetries = 5
 ): Promise<Buffer> {
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {
@@ -431,10 +431,10 @@ async function exportWithRetry(
       if (!isRetryable || attempt >= maxRetries - 1) throw err
 
       // Exponential backoff: longer delays for 429 rate limits
-      const delay = errStatus === 429
-        ? Math.pow(2, attempt) * 3000   // 429: 3s, 6s, 12s
-        : Math.pow(2, attempt) * 1000   // others: 1s, 2s, 4s
-      log.warn(`exportWithRetry: attempt ${attempt + 1} failed, retrying in ${delay}ms...`)
+      const delay = errStatus === 429 || errMsg.includes('429')
+        ? Math.pow(2, attempt) * 5000   // 429: 5s, 10s, 20s, 40s, 80s
+        : Math.pow(2, attempt) * 1000   // others: 1s, 2s, 4s, 8s, 16s
+      log.warn(`exportWithRetry: attempt ${attempt + 1} failed (status=${errStatus}), retrying in ${delay}ms...`)
       await new Promise(r => setTimeout(r, delay))
     }
   }
@@ -470,8 +470,8 @@ export async function generatePdfFromTemplate(
       for (const range of ranges) {
         const buf = await exportWithRetry(spreadsheetId, gid, RANGE_PAGE_CONFIG, range)
         pageBuffers.push(buf)
-        // Short delay between requests to prevent rate limiting
-        await new Promise(r => setTimeout(r, 500))
+        // Delay between page exports to prevent Google API 429 rate limits
+        await new Promise(r => setTimeout(r, 1500))
       }
       return mergePdfPages(pageBuffers)
     }

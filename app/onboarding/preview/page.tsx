@@ -88,9 +88,17 @@ export default function PreviewPage() {
   }, [signatureBase64])
 
   useEffect(() => {
-    // Parallel loading for all documents
-    const results = DOCUMENT_KEYS.map((key) => fetchSinglePreview(key))
-    Promise.allSettled(results)
+    // Sequential loading to prevent Google Sheets API 429 rate limits
+    // (6 parallel requests × 6-9 API calls each = 36-54 simultaneous calls)
+    let cancelled = false
+    async function loadSequentially() {
+      for (const key of DOCUMENT_KEYS) {
+        if (cancelled) break
+        await fetchSinglePreview(key)
+      }
+    }
+    loadSequentially()
+    return () => { cancelled = true }
   }, [fetchSinglePreview])
 
   const current = previews[currentIndex]
