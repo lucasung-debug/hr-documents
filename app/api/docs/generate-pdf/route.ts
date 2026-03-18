@@ -85,6 +85,15 @@ export async function POST(request: NextRequest) {
       previewType: 'pdf',
     })
   } catch (err) {
+    const errStatus = (err as { status?: number })?.status
+    const errMsg = String((err as { message?: string })?.message ?? '')
+    if (errStatus === 429 || errMsg.includes('429')) {
+      log.warn({ err }, 'Google API 429 rate limit')
+      return NextResponse.json(
+        { error: 'Google API 요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' },
+        { status: 429 }
+      )
+    }
     log.error({ err }, 'PDF 미리보기 생성 중 오류가 발생했습니다.')
     return apiFromUnknown(err)
   }
