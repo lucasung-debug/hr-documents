@@ -52,25 +52,10 @@ export function buildContractVariables(
     salary_fix: conditions.salary_fix,
     salary_total: conditions.salary_total,
     work_hours: conditions.work_hours,
-    benefits: conditions.benefits,
-    probation_period: conditions.probation_period,
-    special_terms: conditions.special_terms,
     // Intern (probation) end date from EMPLOYEE_CONTRACT sheet
     intern_date_yy: String(internDate.getFullYear()),
     intern_date_mm: padTwo(internDate.getMonth() + 1),
     intern_date_dd: padTwo(internDate.getDate()),
-  }
-}
-
-/**
- * Build bank account variables from EMPLOYEE_CONTRACT data.
- */
-export function buildBankVariables(
-  conditions: ContractConditions
-): Record<string, string> {
-  return {
-    bank_name: conditions.bank_name ?? '',
-    account_number: conditions.account_number ?? '',
   }
 }
 
