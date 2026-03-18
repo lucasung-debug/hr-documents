@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { generatePdfSchema } from '@/lib/validators/input'
 import { generatePdfFromTemplate } from '@/lib/sheets/template'
 import { getContractConditions } from '@/lib/sheets/contract'
-import { buildBaseVariables, buildContractVariables, buildBankVariables } from '@/lib/sheets/template-variables'
+import { buildBaseVariables, buildContractVariables } from '@/lib/sheets/template-variables'
 import { getEmployeeById } from '@/lib/sheets/employee'
 import { embedSignatureInPdf } from '@/lib/pdf/embed-signature'
 import { base64DataUrlToBuffer } from '@/lib/crypto/hash'
@@ -53,15 +53,10 @@ export async function POST(request: NextRequest) {
     const { employee } = empResult
     const variables = buildBaseVariables(employee)
 
-    const needsConditions = documentKey === 'labor_contract' || (documentKey as string) === 'bank_account'
-    if (needsConditions) {
+    if (documentKey === 'labor_contract') {
       const conditions = await getContractConditions(employeeId)
       if (conditions) {
-        if (documentKey === 'labor_contract') {
-          Object.assign(variables, buildContractVariables(conditions))
-        } else {
-          Object.assign(variables, buildBankVariables(conditions))
-        }
+        Object.assign(variables, buildContractVariables(conditions))
       }
     }
 

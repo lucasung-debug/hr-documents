@@ -10,7 +10,7 @@ import { sendOnboardingEmails } from '@/lib/email/client'
 import { deleteSessionDir } from '@/lib/storage/temp-files'
 import { generatePdfFromTemplate } from '@/lib/sheets/template'
 import { getContractConditions } from '@/lib/sheets/contract'
-import { buildBaseVariables, buildContractVariables, buildBankVariables } from '@/lib/sheets/template-variables'
+import { buildBaseVariables, buildContractVariables } from '@/lib/sheets/template-variables'
 import { embedSignatureInPdf } from '@/lib/pdf/embed-signature'
 import { base64DataUrlToBuffer, sha256 } from '@/lib/crypto/hash'
 import { DOCUMENT_KEYS } from '@/types/document'
@@ -75,7 +75,6 @@ export async function POST(request: NextRequest) {
     const conditions = await getContractConditions(employeeId)
     if (conditions) {
       Object.assign(variables, buildContractVariables(conditions))
-      Object.assign(variables, buildBankVariables(conditions))
     }
 
     const attachments: { filename: string; content: Buffer; contentType: string }[] = []

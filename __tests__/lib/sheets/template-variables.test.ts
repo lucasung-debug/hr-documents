@@ -1,4 +1,4 @@
-import { buildBaseVariables, buildContractVariables, buildBankVariables } from '@/lib/sheets/template-variables'
+import { buildBaseVariables, buildContractVariables } from '@/lib/sheets/template-variables'
 import type { EmployeeMasterRow } from '@/types/employee'
 import type { ContractConditions } from '@/lib/sheets/contract'
 
@@ -62,11 +62,6 @@ describe('buildContractVariables', () => {
     salary_fix: '200,000',
     salary_total: '3,000,000',
     work_hours: '주간',
-    benefits: '4대보험',
-    probation_period: '3개월',
-    special_terms: '없음',
-    bank_name: '국민은행',
-    account_number: '123-456-7890',
   }
 
   it('급여 및 근로 조건 변수를 올바르게 생성함', () => {
@@ -78,14 +73,6 @@ describe('buildContractVariables', () => {
     expect(vars.salary_fix).toBe('200,000')
     expect(vars.salary_total).toBe('3,000,000')
     expect(vars.work_hours).toBe('주간')
-  })
-
-  it('추가 계약 조건 변수를 포함함', () => {
-    const vars = buildContractVariables(mockConditions)
-
-    expect(vars.benefits).toBe('4대보험')
-    expect(vars.probation_period).toBe('3개월')
-    expect(vars.special_terms).toBe('없음')
   })
 
   it('수습 종료일을 yy/mm/dd로 분리함', () => {
@@ -108,68 +95,10 @@ describe('buildContractVariables', () => {
       salary_fix: '',
       salary_total: '',
       work_hours: '',
-      benefits: '',
-      probation_period: '',
-      special_terms: '',
-      bank_name: '',
-      account_number: '',
     }
 
     const vars = buildContractVariables(emptyConditions)
 
     expect(vars.salary_basic).toBe('')
-    expect(vars.benefits).toBe('')
-    expect(vars.probation_period).toBe('')
-    expect(vars.special_terms).toBe('')
-  })
-})
-
-describe('buildBankVariables', () => {
-  it('계좌 정보 변수를 올바르게 생성함', () => {
-    const conditions: ContractConditions = {
-      employee_id: 'EMP001',
-      name: '홍길동',
-      hire_date: '2026.03.16',
-      intern_date: '2026.06.15',
-      position: '사원',
-      salary_basic: '2,500,000',
-      salary_OT: '300,000',
-      salary_fix: '200,000',
-      salary_total: '3,000,000',
-      work_hours: '주간',
-      benefits: '',
-      probation_period: '',
-      special_terms: '',
-      bank_name: '국민은행',
-      account_number: '123-456-7890',
-    }
-
-    const vars = buildBankVariables(conditions)
-    expect(vars.bank_name).toBe('국민은행')
-    expect(vars.account_number).toBe('123-456-7890')
-  })
-
-  it('빈 계좌 정보도 graceful하게 처리함', () => {
-    const conditions: ContractConditions = {
-      employee_id: 'EMP002',
-      name: '',
-      hire_date: '',
-      intern_date: '',
-      position: '',
-      salary_basic: '',
-      salary_OT: '',
-      salary_fix: '',
-      salary_total: '',
-      work_hours: '',
-      benefits: '',
-      probation_period: '',
-      special_terms: '',
-      bank_name: '',
-      account_number: '',
-    }
-
-    const vars = buildBankVariables(conditions)
-    expect(vars.bank_name).toBe('')
-    expect(vars.account_number).toBe('')
   })
 })

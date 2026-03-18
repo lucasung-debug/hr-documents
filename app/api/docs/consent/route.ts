@@ -3,7 +3,7 @@ import { docConsentSchema } from '@/lib/validators/input'
 import { readSignature } from '@/lib/storage/temp-files'
 import { generatePdfFromTemplate } from '@/lib/sheets/template'
 import { getContractConditions } from '@/lib/sheets/contract'
-import { buildBaseVariables, buildContractVariables, buildBankVariables } from '@/lib/sheets/template-variables'
+import { buildBaseVariables, buildContractVariables } from '@/lib/sheets/template-variables'
 import { getEmployeeById } from '@/lib/sheets/employee'
 import {
   findDocStatusByEmployeeId,
@@ -62,10 +62,9 @@ export async function POST(request: NextRequest) {
     let pdfError: string | null = null
 
     // Parallel fetch: employee info + contract conditions (if labor_contract)
-    const needsConditions = documentKey === 'labor_contract' || (documentKey as string) === 'bank_account'
     const [empResult, conditions] = await Promise.all([
       getEmployeeById(employeeId),
-      needsConditions
+      documentKey === 'labor_contract'
         ? getContractConditions(employeeId)
         : Promise.resolve(null),
     ])
@@ -82,9 +81,6 @@ export async function POST(request: NextRequest) {
 
     if (documentKey === 'labor_contract' && conditions) {
       Object.assign(variables, buildContractVariables(conditions))
-    }
-    if ((documentKey as string) === 'bank_account' && conditions) {
-      Object.assign(variables, buildBankVariables(conditions))
     }
 
     try {
