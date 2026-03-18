@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react'
 import { Button } from '@/components/ui/Button'
+import { PdfCanvasViewer } from './PdfCanvasViewer'
 
 interface DocumentPreviewModalProps {
   isOpen: boolean
@@ -30,10 +31,6 @@ export function DocumentPreviewModal({
   }, [isOpen])
 
   if (!isOpen) return null
-
-  const pdfDataUrl = pdfBase64
-    ? `data:application/pdf;base64,${pdfBase64}`
-    : null
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -87,36 +84,25 @@ export function DocumentPreviewModal({
             </div>
           )}
 
-          {!loading && !error && pdfDataUrl && (
-            <object
-              data={pdfDataUrl}
-              type="application/pdf"
-              className="w-full rounded-apple h-[55vh] sm:h-[70vh]"
-            >
-              <iframe
-                src={pdfDataUrl}
-                className="w-full border-0 rounded-apple h-[55vh] sm:h-[70vh]"
-                title={`${title} 미리보기`}
-              >
-                <div className="flex flex-col items-center justify-center h-full gap-3 text-apple-gray-500">
-                  <p className="text-sm">
-                    PDF 미리보기를 표시할 수 없습니다.
-                  </p>
-                  <a
-                    href={pdfDataUrl}
-                    download={`${title}.pdf`}
-                    className="text-sm text-apple-blue underline"
-                  >
-                    PDF 다운로드
-                  </a>
-                </div>
-              </iframe>
-            </object>
+          {!loading && !error && pdfBase64 && (
+            <PdfCanvasViewer
+              pdfBase64={pdfBase64}
+              className="w-full rounded-apple h-[55vh] sm:h-[70vh] overflow-y-auto"
+            />
           )}
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end px-4 sm:px-6 py-3 sm:py-4 border-t border-apple-gray-100">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-t border-apple-gray-100">
+          {pdfBase64 ? (
+            <a
+              href={`data:application/pdf;base64,${pdfBase64}`}
+              download={`${title}.pdf`}
+              className="text-sm text-apple-blue underline"
+            >
+              PDF 다운로드
+            </a>
+          ) : <span />}
           <Button variant="secondary" onClick={onClose}>
             닫기
           </Button>

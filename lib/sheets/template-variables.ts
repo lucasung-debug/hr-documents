@@ -78,7 +78,7 @@ export function buildBankVariables(
  * Parse Korean-style date string like "2026.03.16" into a Date.
  */
 function parseKoreanDate(dateStr: string): Date {
-  const parts = dateStr.replace(/[^0-9.]/g, '').split('.')
+  const parts = dateStr.replace(/[^0-9.\-/]/g, '').split(/[.\-/]/).filter(Boolean)
   const year = parseInt(parts[0] ?? '2026', 10)
   const month = parseInt(parts[1] ?? '1', 10) - 1
   const day = parseInt(parts[2] ?? '1', 10)

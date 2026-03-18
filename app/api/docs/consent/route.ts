@@ -45,7 +45,14 @@ export async function POST(request: NextRequest) {
     let signatureBuffer: Buffer | null = null
 
     if (!isPersonalInfoConsent) {
-      signatureBuffer = readSignature(employeeId)
+      try {
+        signatureBuffer = readSignature(employeeId)
+      } catch {
+        return NextResponse.json(
+          { error: '서명이 필요합니다. 먼저 서명을 완료해주세요.' },
+          { status: 400 }
+        )
+      }
     } else {
       // Try to read signature if available, but don't fail if not
       try {

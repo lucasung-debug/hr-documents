@@ -9,6 +9,9 @@ import {
   buildHrEmailSubject,
   buildEmployeeEmailSubject,
 } from './templates'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('[email/client]')
 
 const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024   // 10 MB per PDF
 const MAX_TOTAL_BYTES = 25 * 1024 * 1024        // 25 MB total
@@ -76,7 +79,7 @@ export async function sendOnboardingEmails(
   employee: EmployeeMasterRow,
   documentKeys: DocumentKey[]
 ): Promise<{ sentAt: string }> {
-  if (!employee.email) {
+  if (!employee.email?.trim()) {
     throw new Error(`근로자 이메일 주소가 없습니다: ${employee.employee_id}`)
   }
 
@@ -91,13 +94,13 @@ export async function sendOnboardingEmails(
   const totalBytes = attachments.reduce((sum, a) => sum + a.content.length, 0)
   const useGDriveLink = totalBytes > MAX_TOTAL_BYTES
 
-  // For oversized attachments, strip files and note in email
-  // (Google Drive link handling is a Phase 2 enhancement; for now, compress if individual exceeds limit)
-  const safeAttachments = attachments.map((a) => ({
-    filename: a.filename,
-    content: a.content.length > MAX_ATTACHMENT_BYTES ? a.content.subarray(0, MAX_ATTACHMENT_BYTES) : a.content,
-    contentType: a.contentType,
-  }))
+  // Reject oversized individual PDFs instead of silently truncating (corrupts PDF)
+  for (const a of attachments) {
+    if (a.content.length > MAX_ATTACHMENT_BYTES) {
+      log.error({ filename: a.filename, size: a.content.length, limit: MAX_ATTACHMENT_BYTES }, 'PDF 첨부 파일 용량 초과')
+      throw new Error(`PDF 첨부 파일 용량이 ${MAX_ATTACHMENT_BYTES / 1024 / 1024}MB를 초과합니다: ${a.filename}`)
+    }
+  }
 
   const transport = createTransport()
 
@@ -106,7 +109,7 @@ export async function sendOnboardingEmails(
     to: hrRecipients.join(', '),
     subject: buildHrEmailSubject(employee.name),
     html: buildHrEmailBody(employee) + (useGDriveLink ? '<p>⚠️ 파일 용량 초과로 일부 파일은 압축되었습니다.</p>' : ''),
-    attachments: safeAttachments,
+    attachments,
   }
 
   const employeeMailOptions: nodemailer.SendMailOptions = {
@@ -114,7 +117,7 @@ export async function sendOnboardingEmails(
     to: employee.email,
     subject: buildEmployeeEmailSubject(),
     html: buildEmployeeEmailBody(employee),
-    attachments: safeAttachments,
+    attachments,
   }
 
   // Send both emails simultaneously with retry logic each

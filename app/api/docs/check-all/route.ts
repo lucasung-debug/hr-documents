@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { DOCUMENT_KEYS, DOC_STATUS } from '@/types/document'
-import type { DocumentKey } from '@/types/document'
+import type { DocumentKey, DocumentStatus } from '@/types/document'
 import {
-  getDocumentStatuses,
   findDocStatusByEmployeeId,
   markAllCompleted,
 } from '@/lib/sheets/document-status'
@@ -19,18 +18,24 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const statuses = await getDocumentStatuses(employeeId)
+    // Single Sheets query instead of two separate calls
+    const statusResult = await findDocStatusByEmployeeId(employeeId)
+
+    const statuses: Record<DocumentKey, DocumentStatus> = {} as Record<DocumentKey, DocumentStatus>
+    for (const key of DOCUMENT_KEYS) {
+      const raw = statusResult?.row[key] ?? '미완료'
+      if (raw === '서명완료') statuses[key] = DOC_STATUS.SIGNED
+      else if (raw === '발송완료') statuses[key] = DOC_STATUS.SENT
+      else statuses[key] = DOC_STATUS.PENDING
+    }
 
     const pending: DocumentKey[] = DOCUMENT_KEYS.filter(
       (key) => statuses[key] === DOC_STATUS.PENDING
     )
     const allCompleted = pending.length === 0
 
-    if (allCompleted) {
-      const statusResult = await findDocStatusByEmployeeId(employeeId)
-      if (statusResult && !statusResult.row.all_completed_at) {
-        await markAllCompleted(statusResult.rowIndex)
-      }
+    if (allCompleted && statusResult && !statusResult.row.all_completed_at) {
+      await markAllCompleted(statusResult.rowIndex)
     }
 
     const response: CheckAllResponse = {

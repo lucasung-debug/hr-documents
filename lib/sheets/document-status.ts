@@ -2,6 +2,9 @@ import { getSheetsClient, SPREADSHEET_ID, SHEET_NAMES, withRetry } from './clien
 import { DOCUMENT_KEYS, DOC_STATUS } from '@/types/document'
 import type { DocumentKey, DocumentStatus } from '@/types/document'
 import type { DocumentStatusRow } from '@/types/employee'
+import { cache } from '@/lib/cache/memory-cache'
+
+const DOC_STATUS_CACHE_TTL = 30_000 // 30 seconds
 
 // Column order: A:employee_id, B:name, C:phone,
 // D:labor_contract, E:personal_info_consent, F:holiday_extension,
@@ -37,6 +40,10 @@ function rowToDocStatus(row: string[]): DocumentStatusRow {
 export async function findDocStatusByEmployeeId(
   employeeId: string
 ): Promise<{ row: DocumentStatusRow; rowIndex: number } | null> {
+  const cacheKey = `docStatus:${employeeId}`
+  const cached = cache.get<{ row: DocumentStatusRow; rowIndex: number }>(cacheKey)
+  if (cached) return cached
+
   const sheets = getSheetsClient()
   const response = await withRetry(() =>
     sheets.spreadsheets.values.get({
@@ -49,7 +56,9 @@ export async function findDocStatusByEmployeeId(
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i] as string[]
     if (row[0] === employeeId) {
-      return { row: rowToDocStatus(row), rowIndex: i + 2 }
+      const result = { row: rowToDocStatus(row), rowIndex: i + 2 }
+      cache.set(cacheKey, result, DOC_STATUS_CACHE_TTL)
+      return result
     }
   }
   return null
@@ -95,6 +104,7 @@ export async function updateDocumentStatus(
       requestBody: { values: [[statusLabel]] },
     })
   )
+  cache.invalidate('docStatus:')
 }
 
 export async function getDocumentStatuses(
@@ -124,6 +134,7 @@ export async function markAllCompleted(rowIndex: number): Promise<void> {
       requestBody: { values: [[now]] },
     })
   )
+  cache.invalidate('docStatus:')
 }
 
 export async function markEmailSent(
@@ -140,6 +151,7 @@ export async function markEmailSent(
       requestBody: { values: [[now, signHash]] },
     })
   )
+  cache.invalidate('docStatus:')
 }
 
 export async function resetDocStatuses(rowIndex: number): Promise<void> {
@@ -154,6 +166,7 @@ export async function resetDocStatuses(rowIndex: number): Promise<void> {
       },
     })
   )
+  cache.invalidate('docStatus:')
 }
 
 export async function setEmailSentinel(rowIndex: number): Promise<void> {
@@ -166,4 +179,5 @@ export async function setEmailSentinel(rowIndex: number): Promise<void> {
       requestBody: { values: [['sending']] },
     })
   )
+  cache.invalidate('docStatus:')
 }

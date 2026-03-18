@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
 
     const { row, rowIndex } = statusResult
 
-    if (row.email_sent_at && row.email_sent_at !== '') {
+    if (row.email_sent_at && row.email_sent_at !== '' && row.email_sent_at !== 'sending') {
       return NextResponse.json(
         { error: '이미 발송된 서류입니다. 중복 발송은 허용되지 않습니다.' },
         { status: 409 }
@@ -61,16 +61,12 @@ export async function POST(request: NextRequest) {
     // 5. Send emails
     const { sentAt } = await sendOnboardingEmails(employee, [...DOCUMENT_KEYS])
 
-    // 6. Update all document statuses to 'sent' in Sheets (parallel)
-    await Promise.all(
-      DOCUMENT_KEYS.map(key => updateDocumentStatus(rowIndex, key, 'sent'))
-    )
-
-    // 7. Mark email sent with timestamp and signature hash
-    await markEmailSent(rowIndex, signHash)
-
-    // 8. Update employee session status to COMPLETED
-    await updateSessionStatus(empResult.rowIndex, SESSION_STATUS.COMPLETED)
+    // 6-8. Update all statuses, mark email sent, and update session in parallel
+    await Promise.all([
+      ...DOCUMENT_KEYS.map(key => updateDocumentStatus(rowIndex, key, 'sent')),
+      markEmailSent(rowIndex, signHash),
+      updateSessionStatus(empResult.rowIndex, SESSION_STATUS.COMPLETED),
+    ])
 
     // 9. Delete temp files (fire and forget — don't block response)
     try {
