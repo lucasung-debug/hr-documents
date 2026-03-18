@@ -8,6 +8,8 @@ interface SessionContextValue {
   setEmployeeName: (name: string) => void
   signHash: string | null
   setSignHash: (hash: string) => void
+  signatureBase64: string | null
+  setSignatureBase64: (sig: string) => void
   resetTimer: () => void
 }
 
@@ -19,6 +21,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const [employeeName, setEmployeeName] = useState<string | null>(null)
   const [signHash, setSignHash] = useState<string | null>(null)
+  const [signatureBase64, setSignatureBase64] = useState<string | null>(null)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const resetTimer = () => {
@@ -41,7 +44,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <SessionContext.Provider
-      value={{ employeeName, setEmployeeName, signHash, setSignHash, resetTimer }}
+      value={{ employeeName, setEmployeeName, signHash, setSignHash, signatureBase64, setSignatureBase64, resetTimer }}
     >
       {children}
     </SessionContext.Provider>

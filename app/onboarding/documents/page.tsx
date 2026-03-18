@@ -5,10 +5,12 @@ import { useRouter } from 'next/navigation'
 import { DocumentList } from '@/components/documents/DocumentList'
 import { Button } from '@/components/ui/Button'
 import { apiFetch } from '@/lib/api/client-fetch'
+import { useSession } from '@/components/providers/SessionProvider'
 import type { DocListItem } from '@/types/api'
 
 export default function DocumentsPage() {
   const router = useRouter()
+  const { signatureBase64 } = useSession()
   const [docs, setDocs] = useState<DocListItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -43,7 +45,7 @@ export default function DocumentsPage() {
     const res = await apiFetch('/api/docs/consent', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ documentKey: key }),
+      body: JSON.stringify({ documentKey: key, signatureBase64 }),
     })
     if (!res.ok) {
       const data = await res.json()

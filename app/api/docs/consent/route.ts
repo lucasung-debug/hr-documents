@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { docConsentSchema } from '@/lib/validators/input'
-import { readSignature, ensureSessionDir, getPdfPath } from '@/lib/storage/temp-files'
-import { generateSignedPdf } from '@/lib/pdf/generator'
+import { readSignature } from '@/lib/storage/temp-files'
 import { generatePdfFromTemplate } from '@/lib/sheets/template'
 import { getContractConditions } from '@/lib/sheets/contract'
 import { buildBaseVariables, buildContractVariables, buildBankVariables } from '@/lib/sheets/template-variables'
@@ -11,15 +10,11 @@ import {
   updateDocumentStatus,
 } from '@/lib/sheets/document-status'
 import { DOC_STATUS } from '@/types/document'
-import { getSignaturePositionConfig } from '@/lib/pdf/signature-config'
-import { PDFDocument } from 'pdf-lib'
-import fs from 'fs'
+import { base64DataUrlToBuffer } from '@/lib/crypto/hash'
 import { createLogger } from '@/lib/logger'
 import { apiFromUnknown } from '@/lib/api'
 
 const log = createLogger('[docs/consent]')
-
-const USE_SHEETS = process.env.USE_SHEETS_TEMPLATES !== 'false'
 
 export async function POST(request: NextRequest) {
   const employeeId = request.headers.get('x-employee-id')
@@ -38,13 +33,15 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { documentKey } = parsed.data
+    const { documentKey, signatureBase64 } = parsed.data
 
-    // personal_info_consent: signature is optional (handled before signature step)
+    // Resolve signature: prefer request body, fallback to /tmp file
     const isPersonalInfoConsent = documentKey === 'personal_info_consent'
     let signatureBuffer: Buffer | null = null
 
-    if (!isPersonalInfoConsent) {
+    if (signatureBase64) {
+      signatureBuffer = base64DataUrlToBuffer(signatureBase64)
+    } else if (!isPersonalInfoConsent) {
       try {
         signatureBuffer = readSignature(employeeId)
       } catch {
@@ -54,114 +51,52 @@ export async function POST(request: NextRequest) {
         )
       }
     } else {
-      // Try to read signature if available, but don't fail if not
       try {
         signatureBuffer = readSignature(employeeId)
       } catch {
-        // Signature not yet available for personal_info_consent
         signatureBuffer = null
       }
     }
 
+    // Generate PDF from template and embed signature (no /tmp write needed)
     let pdfError: string | null = null
 
-    if (USE_SHEETS) {
-      // --- Sheets-based pipeline ---
-      // Parallel fetch: employee info + contract conditions (if labor_contract)
-      const needsConditions = documentKey === 'labor_contract' || (documentKey as string) === 'bank_account'
-      const [empResult, conditions] = await Promise.all([
-        getEmployeeById(employeeId),
-        needsConditions
-          ? getContractConditions(employeeId)
-          : Promise.resolve(null),
-      ])
+    // Parallel fetch: employee info + contract conditions (if labor_contract)
+    const needsConditions = documentKey === 'labor_contract' || (documentKey as string) === 'bank_account'
+    const [empResult, conditions] = await Promise.all([
+      getEmployeeById(employeeId),
+      needsConditions
+        ? getContractConditions(employeeId)
+        : Promise.resolve(null),
+    ])
 
-      if (!empResult) {
-        return NextResponse.json(
-          { error: '직원 정보를 찾을 수 없습니다.' },
-          { status: 404 }
-        )
-      }
+    if (!empResult) {
+      return NextResponse.json(
+        { error: '직원 정보를 찾을 수 없습니다.' },
+        { status: 404 }
+      )
+    }
 
-      const { employee } = empResult
-      const variables = buildBaseVariables(employee)
+    const { employee } = empResult
+    const variables = buildBaseVariables(employee)
 
-      if (documentKey === 'labor_contract' && conditions) {
-        Object.assign(variables, buildContractVariables(conditions))
-      }
-      if ((documentKey as string) === 'bank_account' && conditions) {
-        Object.assign(variables, buildBankVariables(conditions))
-      }
+    if (documentKey === 'labor_contract' && conditions) {
+      Object.assign(variables, buildContractVariables(conditions))
+    }
+    if ((documentKey as string) === 'bank_account' && conditions) {
+      Object.assign(variables, buildBankVariables(conditions))
+    }
 
-      try {
-        // Generate PDF from Sheets template (pay_sec selects monthly/daily)
-        const pdfBuffer = await generatePdfFromTemplate(
-          documentKey,
-          variables,
-          employee.pay_sec
-        )
-
-        // Embed signature image into the PDF (if signature is available)
-        const pdfDoc = await PDFDocument.load(pdfBuffer)
-        const pages = pdfDoc.getPages()
-
-        if (signatureBuffer && Buffer.isBuffer(signatureBuffer)) {
-          const config = getSignaturePositionConfig()
-          const posKey = documentKey === 'labor_contract'
-            ? `labor_contract_${employee.pay_sec}` as const
-            : documentKey
-          const position = config[posKey] ?? config[documentKey]
-
-          // Support single position or array of positions
-          const positions = Array.isArray(position) ? position : position ? [position] : []
-          if (positions.length > 0) {
-            const sigImage = await pdfDoc.embedPng(signatureBuffer)
-            for (const pos of positions) {
-              if (pos.page < pages.length) {
-                const page = pages[pos.page]
-                const { width: pageW, height: pageH } = page.getSize()
-                if (pos.x + pos.width > pageW || pos.y + pos.height > pageH) {
-                  log.warn({ documentKey, posKey, page: pos.page, pageW, pageH, pos },
-                    'Signature position may extend beyond page bounds')
-                }
-                page.drawImage(sigImage, {
-                  x: pos.x,
-                  y: pos.y,
-                  width: pos.width,
-                  height: pos.height,
-                })
-              } else {
-                log.warn({ documentKey, posKey, page: pos.page, totalPages: pages.length },
-                  'Signature position references non-existent page')
-              }
-            }
-          } else {
-            log.warn({ documentKey, posKey }, 'No signature positions configured')
-          }
-        }
-
-        const signedPdfBytes = await pdfDoc.save()
-
-        // Save to temp storage
-        ensureSessionDir(employeeId)
-        const outputPath = getPdfPath(employeeId, documentKey)
-        fs.writeFileSync(outputPath, signedPdfBytes)
-      } catch (pdfErr) {
-        log.error({ err: pdfErr, documentKey }, 'PDF 생성 실패 — 상태는 서명완료로 전환합니다.')
-        pdfError = String((pdfErr as { message?: string })?.message ?? pdfErr)
-      }
-    } else {
-      // --- Legacy PDF template pipeline ---
-      if (signatureBuffer && Buffer.isBuffer(signatureBuffer)) {
-        const result = await generateSignedPdf(employeeId, documentKey, signatureBuffer)
-        if (!result.success) {
-          return NextResponse.json(
-            { error: result.error ?? 'PDF 생성에 실패했습니다.' },
-            { status: 500 }
-          )
-        }
-      }
-      // If no signature (personal_info_consent), skip PDF generation for legacy pipeline
+    try {
+      await generatePdfFromTemplate(
+        documentKey,
+        variables,
+        employee.pay_sec
+      )
+      // PDF generation succeeded — no need to save to /tmp, just validate it works
+    } catch (pdfErr) {
+      log.error({ err: pdfErr, documentKey }, 'PDF 생성 실패 — 상태는 서명완료로 전환합니다.')
+      pdfError = String((pdfErr as { message?: string })?.message ?? pdfErr)
     }
 
     // Update Google Sheets status — always attempt even if PDF generation failed

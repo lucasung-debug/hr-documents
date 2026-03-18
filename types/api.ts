@@ -35,6 +35,7 @@ export interface DocListResponse {
 // POST /api/docs/consent
 export interface DocConsentRequest {
   documentKey: DocumentKey
+  signatureBase64?: string
 }
 export interface DocConsentResponse {
   success: boolean
@@ -46,6 +47,7 @@ export interface DocConsentResponse {
 // POST /api/docs/generate-pdf
 export interface GeneratePdfRequest {
   documentKey: DocumentKey
+  signatureBase64?: string
 }
 export interface GeneratePdfResponse {
   success: boolean
