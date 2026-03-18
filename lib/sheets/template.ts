@@ -430,8 +430,10 @@ async function exportWithRetry(
         errMsg.includes('400') || errMsg.includes('404') || errMsg.includes('429')
       if (!isRetryable || attempt >= maxRetries - 1) throw err
 
-      // Exponential backoff: 1s, 2s, 4s
-      const delay = Math.pow(2, attempt) * 1000
+      // Exponential backoff: longer delays for 429 rate limits
+      const delay = errStatus === 429
+        ? Math.pow(2, attempt) * 3000   // 429: 3s, 6s, 12s
+        : Math.pow(2, attempt) * 1000   // others: 1s, 2s, 4s
       log.warn(`exportWithRetry: attempt ${attempt + 1} failed, retrying in ${delay}ms...`)
       await new Promise(r => setTimeout(r, delay))
     }
@@ -462,13 +464,15 @@ export async function generatePdfFromTemplate(
     const breakRows = PAGE_BREAK_ROWS[templateKey]
 
     if (breakRows) {
-      // Multi-page: export each row range separately, then merge
+      // Multi-page: export each row range sequentially to avoid Google API rate limits (429)
       const ranges = buildPageRanges(breakRows)
-      const pageBuffers = await Promise.all(
-        ranges.map((range) =>
-          exportWithRetry(spreadsheetId, gid, RANGE_PAGE_CONFIG, range)
-        )
-      )
+      const pageBuffers: Buffer[] = []
+      for (const range of ranges) {
+        const buf = await exportWithRetry(spreadsheetId, gid, RANGE_PAGE_CONFIG, range)
+        pageBuffers.push(buf)
+        // Short delay between requests to prevent rate limiting
+        await new Promise(r => setTimeout(r, 500))
+      }
       return mergePdfPages(pageBuffers)
     }
 

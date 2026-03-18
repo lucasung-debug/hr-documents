@@ -7,8 +7,12 @@ import { getContractConditions } from '@/lib/sheets/contract'
 import { buildBaseVariables, buildContractVariables, buildBankVariables } from '@/lib/sheets/template-variables'
 import { createLogger } from '@/lib/logger'
 import { apiFromUnknown } from '@/lib/api'
+import { cache } from '@/lib/cache/memory-cache'
 
 const log = createLogger('[docs/preview]')
+
+/** Server-side PDF cache TTL: 5 minutes */
+const PDF_CACHE_TTL_MS = 5 * 60 * 1000
 
 function isValidDocumentKey(key: string): key is DocumentKey {
   return (DOCUMENT_KEYS as readonly string[]).includes(key)
@@ -58,6 +62,14 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Check server-side PDF cache first to avoid redundant Google API calls
+    const cacheKey = `pdf:${employeeId}:${documentKey}`
+    const cachedBase64 = cache.get<string>(cacheKey)
+    if (cachedBase64) {
+      log.info(`PDF cache hit: ${documentKey}`)
+      return NextResponse.json({ success: true, pdfBase64: cachedBase64 })
+    }
+
     // Generate PDF from Sheets template (pay_sec selects monthly/daily)
     // Retry once on transient Sheets API failures
     let pdfBuffer: Buffer
@@ -77,6 +89,9 @@ export async function GET(request: NextRequest) {
     }
 
     const pdfBase64 = pdfBuffer.toString('base64')
+
+    // Cache the generated PDF to reduce Google API calls
+    cache.set(cacheKey, pdfBase64, PDF_CACHE_TTL_MS)
 
     return NextResponse.json({
       success: true,
