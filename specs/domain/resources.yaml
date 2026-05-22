@@ -1,0 +1,30 @@
+version: "2.0"
+resources:
+  onboarding_cases:
+    description: HR 온보딩 운영 허브의 데모/운영 공통 케이스 리소스
+    fields:
+      - employee_id
+      - name
+      - department
+      - hire_date
+      - session_status
+      - documents
+      - completed_count
+      - all_completed_at
+      - email_sent_at
+      - case_id
+      - case_status
+      - pdf_packet_status
+      - workspace_sync_status
+      - notification_status
+      - action_required
+      - blocked_reason
+      - drive_file_id
+      - drive_archived_at
+      - slack_notified_at
+      - last_case_event_at
+      - case_schema_version
+    privacy:
+      pii_allowed_in_ui: [name, department, hire_date]
+      pii_forbidden_in_slack: [name, phone, email, sign_hash, drive_file_id, pdf_url]
+      demo_mode: 더미 데이터만 사용하며 실제 개인정보나 외부 연동 토큰을 사용하지 않음
