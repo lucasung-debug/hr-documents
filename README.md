@@ -4,6 +4,36 @@
 7종 인사 서류에 전자서명을 받아 PDF로 생성하고, Google Sheets에 진행 상태를 기록하며,
 완료된 문서를 HR 담당자에게 이메일로 자동 전송합니다.
 
+이 프로젝트는 현재 **실제 HR 운영 시스템이 아니라 포트폴리오용 demo/dummy 환경**을 기준으로 공개합니다. Google Drive, Slack, OAuth, HR 이메일 수신자 등 외부 연동값은 실제 운영 계정이 아닌 dummy 값 또는 비활성 feature flag로 다루며, 개인정보(PII)가 없는 샘플 케이스로 온보딩 운영 흐름을 보여주는 데 목적이 있습니다.
+
+## 포트폴리오 데모 기준
+
+- **데모 목적**: 신규 입사자 문서 제출 이후 HR 담당자가 확인해야 하는 상태, PDF 보관 여부, 알림 상태를 하나의 Onboarding Case로 추적하는 운영 허브를 보여줍니다.
+- **데이터 기준**: 실제 직원 정보가 아닌 dummy/demo 데이터와 case ID 중심의 상태값을 사용합니다.
+- **외부 연동 기준**: Google Drive archive와 Slack notification은 구조와 테스트를 갖춘 adapter로 구현되어 있지만, 공개 데모에서는 실제 토큰·웹훅·운영 폴더를 연결하지 않습니다.
+- **보안 기준**: Slack 메시지와 로그에는 이름, 이메일, 전화번호, 주민등록번호 등 PII를 넣지 않고 `case_id`, 상태, 조치 필요 여부 중심으로만 설계합니다.
+- **운영 판정**: production live enablement는 의도적으로 **NO-GO**입니다. 실제 운영 전에는 HR 승인, secret review, OAuth scope 검증, Drive folder 검증, Slack destination 검증, dependency advisory 처리 또는 risk acceptance가 필요합니다.
+
+## HR Onboarding Operations Hub
+
+기존 전자서명 앱을 확장해, 신규 입사자 한 명을 하나의 `Onboarding Case`로 관리합니다.
+
+핵심 흐름:
+
+1. 입사자가 7종 HR 문서에 서명하고 PDF를 생성합니다.
+2. 시스템이 안정적인 `case_id`를 부여합니다.
+3. Google Sheets `DOCUMENT_STATUS`의 기존 문서 상태와 신규 M:X 온보딩 메타데이터를 함께 관리합니다.
+4. Drive archive adapter가 case ID 기반 파일명과 private file ID 저장 구조를 제공합니다.
+5. Slack notification adapter가 PII-free 조치 필요 알림 payload를 생성합니다.
+6. Admin dashboard에서 case status, action required, archive status, notification status를 확인합니다.
+
+자세한 운영 문서:
+
+- [Onboarding Operations Hub](docs/onboarding-operations-hub.md)
+- [Production Readiness Checklist](docs/production-readiness/onboarding-operations-release-checklist.md)
+- [Operator Runbook](docs/production-readiness/onboarding-operations-runbook.md)
+- [Rollback Notes](docs/production-readiness/onboarding-operations-rollback.md)
+
 ## 기술 스택
 
 | 계층 | 기술 |
@@ -31,7 +61,8 @@ npm install
 
 ```bash
 cp .env.example .env.local
-# .env.local 파일을 열어 실제 값 입력
+# 포트폴리오 데모에서는 dummy 값을 사용할 수 있습니다.
+# 실제 운영 연결 시에만 Google/Gmail/Drive/Slack 값을 실제 계정으로 교체합니다.
 ```
 
 **필수 환경변수:**
@@ -40,6 +71,12 @@ cp .env.example .env.local
 - `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_REFRESH_TOKEN` — Gmail OAuth2
 - `SHEET_EMPLOYEE_MASTER`, `SHEET_DOCUMENT_STATUS` — 시트 탭 이름
 - `HR_EMAIL_RECIPIENTS` — HR 담당자 이메일 (콤마 구분)
+
+**데모/더미 연동 환경변수:**
+- `HR_DASHBOARD_DEMO_ENABLED=1` — production 배포에서도 `?demo=1` admin dashboard fixture 접근 허용
+- `GOOGLE_DRIVE_ARCHIVE_ENABLED=false` — Drive archive 실제 업로드 비활성화
+- `SLACK_ONBOARDING_NOTIFICATIONS_ENABLED=false` — Slack webhook 실제 발송 비활성화
+- `GOOGLE_DRIVE_ARCHIVE_FOLDER_ID`, `SLACK_ONBOARDING_WEBHOOK_URL` — 실제 운영 전까지 dummy 또는 미설정 유지
 
 ### 3. Google Sheets 설정
 
