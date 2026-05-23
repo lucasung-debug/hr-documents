@@ -153,6 +153,64 @@ describe('extended document status sheet helpers', () => {
     })
   })
 
+  it('merges partial metadata patches without clearing existing Drive archive fields', async () => {
+    mockGet.mockResolvedValueOnce({
+      data: {
+        values: [
+          [
+            'ONB-EMP001',
+            'action_required',
+            'generated',
+            'failed',
+            'email_sent',
+            'drive_sync_failed',
+            'Drive archive failed',
+            'drive-file-1',
+            '2026-05-01T00:00:00.000Z',
+            '',
+            '2026-05-01T00:00:00.000Z',
+            '1',
+          ],
+        ],
+      },
+    })
+    mockUpdate.mockResolvedValueOnce({ data: {} })
+
+    await updateCaseMetadata(5, {
+      notification_status: 'both',
+      slack_notified_at: '2026-05-02T00:00:00.000Z',
+      last_case_event_at: '2026-05-02T00:00:00.000Z',
+    })
+
+    expect(mockGet).toHaveBeenCalledWith({
+      spreadsheetId: 'spreadsheet-id',
+      range: 'DOCUMENT_STATUS!M5:X5',
+    })
+    expect(mockUpdate).toHaveBeenCalledWith({
+      spreadsheetId: 'spreadsheet-id',
+      range: 'DOCUMENT_STATUS!M5:X5',
+      valueInputOption: 'RAW',
+      requestBody: {
+        values: [
+          [
+            'ONB-EMP001',
+            'action_required',
+            'generated',
+            'failed',
+            'both',
+            'drive_sync_failed',
+            'Drive archive failed',
+            'drive-file-1',
+            '2026-05-01T00:00:00.000Z',
+            '2026-05-02T00:00:00.000Z',
+            '2026-05-02T00:00:00.000Z',
+            '1',
+          ],
+        ],
+      },
+    })
+  })
+
   it('keeps existing A:L helpers on their original ranges', async () => {
     mockGet.mockResolvedValueOnce({ data: { values: [] } })
     mockAppend.mockResolvedValueOnce({ data: {} })

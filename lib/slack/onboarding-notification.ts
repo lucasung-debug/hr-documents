@@ -17,7 +17,7 @@ export interface SlackWebhookPayload {
   blocks: Array<Record<string, unknown>>
 }
 
-type SlackFetch = (
+export type SlackFetch = (
   url: string,
   init: {
     method: 'POST'

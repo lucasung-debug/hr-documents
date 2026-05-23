@@ -18,7 +18,7 @@ import type { DocumentKey } from '@/types/document'
 import { SESSION_STATUS } from '@/types/employee'
 import { createLogger } from '@/lib/logger'
 import { apiFromUnknown } from '@/lib/api'
-import { archiveEmailOnboardingPacket } from '@/lib/onboarding/workspace-archive'
+import { syncOnboardingWorkspace } from '@/lib/onboarding/workspace-sync'
 
 const log = createLogger('[email/send]')
 
@@ -116,9 +116,9 @@ export async function POST(request: NextRequest) {
     ])
 
     try {
-      await archiveEmailOnboardingPacket({ employeeId, attachments })
+      await syncOnboardingWorkspace({ employeeId, attachments })
     } catch {
-      log.warn('Onboarding archive failed after email delivery')
+      log.warn('Onboarding workspace sync failed after email delivery')
     }
 
     // 10. Delete temp files (fire and forget — don't block response)
