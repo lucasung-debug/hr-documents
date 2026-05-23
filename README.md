@@ -26,6 +26,7 @@
 4. Drive archive adapter가 case ID 기반 파일명과 private file ID 저장 구조를 제공합니다.
 5. Slack notification adapter가 PII-free 조치 필요 알림 payload를 생성합니다.
 6. Admin dashboard에서 case status, action required, archive status, notification status를 확인합니다.
+7. Admin dashboard의 Integration Setup 패널에서 demo env, Google Sheets, Gmail OAuth2, Drive archive, Slack notification 연결값과 관련 모듈 경계를 확인하고 복사합니다.
 
 자세한 운영 문서:
 

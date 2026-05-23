@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import type { DashboardResponse } from '@/types/admin'
 import { StatsCards } from '@/components/admin/StatsCards'
 import { EmployeeTable } from '@/components/admin/EmployeeTable'
+import { IntegrationSetupPanel } from '@/components/admin/IntegrationSetupPanel'
 
 export default function AdminDashboardPage() {
   const [data, setData] = useState<DashboardResponse | null>(null)
@@ -105,6 +106,8 @@ export default function AdminDashboardPage() {
       )}
 
       <StatsCards stats={data.stats} />
+
+      <IntegrationSetupPanel />
 
       <EmployeeTable
         employees={data.employees}
