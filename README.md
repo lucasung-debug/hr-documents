@@ -1,8 +1,8 @@
-# E-Sign Onboarding Document Automation
+# HR Onboarding Operations Hub
 
-신규 입사자 온보딩 전자서명 자동화 웹 애플리케이션.
-7종 인사 서류에 전자서명을 받아 PDF로 생성하고, Google Sheets에 진행 상태를 기록하며,
-완료된 문서를 HR 담당자에게 이메일로 자동 전송합니다.
+신규 입사자 온보딩 문서를 전자서명, PDF 생성, Google Sheets 상태 관리, Drive 보관, Slack 조치 알림까지 연결하는 **HR 운영 자동화 모듈형 웹 애플리케이션**입니다.
+
+기본 앱은 7종 인사 서류에 전자서명을 받아 PDF로 생성하고, Google Sheets에 진행 상태를 기록하며, 완료된 문서를 HR 담당자에게 이메일로 자동 전송합니다. 여기에 `Onboarding Case` 도메인과 Drive/Slack adapter를 얹어, 실제 회사 도구에 연결 가능한 운영 허브 구조로 확장했습니다.
 
 이 프로젝트는 현재 **실제 HR 운영 시스템이 아니라 포트폴리오용 demo/dummy 환경**을 기준으로 공개합니다. Google Drive, Slack, OAuth, HR 이메일 수신자 등 외부 연동값은 실제 운영 계정이 아닌 dummy 값 또는 비활성 feature flag로 다루며, 개인정보(PII)가 없는 샘플 케이스로 온보딩 운영 흐름을 보여주는 데 목적이 있습니다.
 
@@ -68,7 +68,7 @@ cp .env.example .env.local
 **필수 환경변수:**
 - `JWT_SECRET` — 256비트 hex 비밀키
 - `GOOGLE_SPREADSHEET_ID` — Google Sheets 문서 ID
-- `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_REFRESH_TOKEN` — Gmail OAuth2
+- `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_CLIENT_REFRESH_TOKEN` — Gmail OAuth2
 - `SHEET_EMPLOYEE_MASTER`, `SHEET_DOCUMENT_STATUS` — 시트 탭 이름
 - `HR_EMAIL_RECIPIENTS` — HR 담당자 이메일 (콤마 구분)
 
@@ -113,6 +113,165 @@ npm run dev
 docker-compose up -d
 ```
 
+## 실제 연동 방법
+
+이 저장소는 demo/dummy 상태로 공개하지만, 외부 도구 연결부는 모듈화되어 있어 아래 순서로 실제 Google Workspace와 Slack에 연결할 수 있습니다.
+
+### 1. Google Sheets를 상태 저장소로 연결
+
+역할:
+- `EMPLOYEE_MASTER`: 입사자 기본 정보 조회
+- `DOCUMENT_STATUS`: 문서 제출 상태와 온보딩 case metadata 저장
+- 신규 온보딩 metadata는 `DOCUMENT_STATUS`의 M:X 컬럼을 사용합니다.
+
+필요 작업:
+1. Google Cloud Console에서 프로젝트를 생성합니다.
+2. Google Sheets API를 활성화합니다.
+3. OAuth client 또는 서비스 계정을 준비합니다.
+4. 대상 스프레드시트에 접근 권한을 부여합니다.
+5. `.env.local`에 아래 값을 설정합니다.
+
+```env
+GOOGLE_SPREADSHEET_ID=your-sheet-id
+SHEET_EMPLOYEE_MASTER=EMPLOYEE_MASTER
+SHEET_DOCUMENT_STATUS=DOCUMENT_STATUS
+```
+
+연동되는 코드:
+- `lib/sheets/document-status.ts`
+- `lib/onboarding/sheets-repository.ts`
+- `types/onboarding.ts`
+
+검증 방법:
+```bash
+npm run test -- __tests__/lib/onboarding/sheets-repository.test.ts --runInBand
+npm run test -- __tests__/lib/sheets/document-status-extended.test.ts --runInBand
+```
+
+### 2. Gmail OAuth2로 HR 이메일 발송 연결
+
+역할:
+- 입사자가 문서를 모두 완료하면 PDF를 HR 담당자에게 이메일로 전송합니다.
+- 이후 `syncOnboardingWorkspace`가 Drive archive와 알림 상태 동기화의 entry point가 됩니다.
+
+필요 OAuth scope:
+- `https://www.googleapis.com/auth/gmail.send`
+- `https://www.googleapis.com/auth/spreadsheets`
+- `https://www.googleapis.com/auth/drive.readonly` — Sheets 기반 PDF export를 사용하는 경우
+- `https://www.googleapis.com/auth/drive.file` — Drive archive 업로드를 켜는 경우
+
+환경변수:
+```env
+GMAIL_CLIENT_ID=your-client-id
+GMAIL_CLIENT_SECRET=your-client-secret
+GMAIL_CLIENT_REFRESH_TOKEN=your-refresh-token
+GMAIL_SENDER_ADDRESS=hr@example.com
+HR_EMAIL_RECIPIENTS=hr@example.com,manager@example.com
+```
+
+연동되는 코드:
+- `lib/email/*`
+- `app/api/email/send/route.ts`
+- `lib/onboarding/workspace-sync.ts`
+
+주의:
+- OAuth scope를 추가하거나 바꾸면 refresh token을 다시 발급해야 합니다.
+- README와 로그에 실제 token, client secret, refresh token을 기록하지 않습니다.
+
+### 3. Google Drive archive adapter 연결
+
+역할:
+- 생성된 onboarding PDF packet을 비공개 Drive folder에 보관합니다.
+- 공개 링크가 아니라 private `drive_file_id`와 `drive_archived_at`만 metadata로 저장합니다.
+- 파일명은 입사자 이름이 아니라 `case_id` 기반으로 생성합니다.
+
+환경변수:
+```env
+GOOGLE_DRIVE_ARCHIVE_ENABLED=true
+GOOGLE_DRIVE_ARCHIVE_FOLDER_ID=your-private-drive-folder-id
+```
+
+연동되는 코드:
+- `lib/google/drive-client.ts`
+- `lib/google/drive-archive.ts`
+- `lib/onboarding/workspace-archive.ts`
+- `lib/onboarding/pdf-packet.ts`
+
+검증 방법:
+```bash
+npm run test -- __tests__/lib/google/drive-archive.test.ts --runInBand
+npm run test -- __tests__/lib/onboarding/workspace-archive.test.ts --runInBand
+```
+
+운영 전 확인:
+- Drive folder가 비공개인지 확인합니다.
+- 앱이 생성하거나 접근 권한을 받은 파일만 다루도록 `drive.file` 중심 scope를 사용합니다.
+- 실제 운영에서는 archive 실패 시 email-only flow가 계속 유지되는지 확인합니다.
+
+### 4. Slack notification adapter 연결
+
+역할:
+- HR 담당자가 조치해야 하는 case만 Slack으로 알립니다.
+- Slack payload는 PII-free를 원칙으로 하며, 이름/이메일/전화번호/주민등록번호를 넣지 않습니다.
+- 메시지는 `case_id`, 상태, 조치 필요 유형, 내부 dashboard 링크 중심으로 구성합니다.
+
+환경변수:
+```env
+SLACK_ONBOARDING_NOTIFICATIONS_ENABLED=true
+SLACK_ONBOARDING_WEBHOOK_URL=https://hooks.slack.com/services/...
+NEXT_PUBLIC_BASE_URL=https://your-domain.com
+```
+
+연동되는 코드:
+- `lib/slack/onboarding-notification.ts`
+- `lib/onboarding/workspace-sync.ts`
+- `types/onboarding.ts`
+
+검증 방법:
+```bash
+npm run test -- __tests__/lib/slack/onboarding-notification.test.ts --runInBand
+npm run test -- __tests__/lib/onboarding/workspace-sync.test.ts --runInBand
+```
+
+운영 전 확인:
+- Webhook URL을 GitHub, README, 로그에 남기지 않습니다.
+- Slack channel이 HR 담당자 전용인지 확인합니다.
+- 알림 중복 방지를 위해 `slack_notified_at`, `notification_status` metadata 업데이트가 성공하는지 확인합니다.
+
+### 5. Demo dashboard를 공개 포트폴리오로 노출
+
+실제 HR 계정 없이도 포트폴리오에서는 dummy case dashboard를 보여줄 수 있습니다.
+
+환경변수:
+```env
+HR_DASHBOARD_DEMO_ENABLED=1
+GOOGLE_DRIVE_ARCHIVE_ENABLED=false
+SLACK_ONBOARDING_NOTIFICATIONS_ENABLED=false
+```
+
+접속 예시:
+```text
+/admin/dashboard?demo=1
+```
+
+이 모드에서는:
+- 실제 Sheets 조회 없이 fixture data를 보여줍니다.
+- Drive/Slack 실제 발송은 꺼둡니다.
+- viewer는 HR 운영 허브의 상태 모델과 dashboard UX만 확인합니다.
+
+### 6. Production enablement gate
+
+실제 운영 연결 전에는 아래 항목이 모두 완료되어야 합니다.
+
+- HR 담당자 승인
+- `.env.local` / Vercel environment variables secret review
+- Google OAuth scope와 refresh token 재발급 확인
+- Drive archive folder 권한과 공개 공유 비활성 확인
+- Slack webhook destination 확인
+- `npm run type-check`, `npm run test -- --runInBand`, `npm run build`, `npm run lint` 통과
+- `npm audit --audit-level=high --omit=dev` 결과 처리 또는 명시적 risk acceptance
+- rollback 절차 확인: Drive/Slack feature flag를 `false`로 되돌려 email-only flow 유지
+
 ## 프로젝트 구조
 
 ```
@@ -140,11 +299,14 @@ docker-compose up -d
 │   ├── auth/                       # JWT 서명/검증 (HS256, 30분 만료)
 │   ├── crypto/                     # SHA-256 해싱
 │   ├── email/                      # Gmail OAuth2, 이메일 템플릿
+│   ├── google/                     # Drive client, Drive archive adapter
+│   ├── onboarding/                 # Onboarding Case 도메인, repository, workspace sync
 │   ├── errors/                     # 에러 코드 관리
 │   ├── logger/                     # Pino 구조화 로깅
 │   ├── pdf/                        # PDF 생성 + 서명 배치
 │   ├── rate-limit/                 # 로그인 시도 제한 (60초/5회)
 │   ├── sheets/                     # Google Sheets 클라이언트
+│   ├── slack/                      # PII-free Slack notification adapter
 │   ├── storage/                    # 임시 파일·세션 디렉토리 관리
 │   └── validators/                 # Zod 입력 검증 스키마
 ├── scripts/                        # 유틸리티 스크립트 (캘리브레이션, 시트 관리)

@@ -11,13 +11,13 @@ export const viewport: Viewport = {
 }
 
 export const metadata: Metadata = {
-  title: '입사 서류 전자서명',
-  description: '신규 입사자 온보딩 전자서명 시스템',
+  title: 'HR Onboarding Operations Hub',
+  description: '신규 입사자 온보딩 문서, PDF 보관, 상태 추적, HR 알림을 연결하는 운영 자동화 허브',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: '전자서명',
+    title: 'HR Onboarding Hub',
   },
 }
 
