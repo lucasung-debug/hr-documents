@@ -1,11 +1,21 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { jwtVerify } from 'jose'
+import { isDashboardDemoEnabled } from './lib/onboarding/demo-mode'
 
 const PUBLIC_PATHS = ['/api/auth/login', '/api/health', '/login', '/_next', '/favicon.ico']
 
 function isPublicPath(pathname: string): boolean {
   return PUBLIC_PATHS.some((p) => pathname.startsWith(p))
+}
+
+function isDemoDashboardPath(request: NextRequest): boolean {
+  const { pathname, searchParams } = request.nextUrl
+  return (
+    isDashboardDemoEnabled() &&
+    searchParams.get('demo') === '1' &&
+    (pathname === '/admin/dashboard' || pathname === '/api/admin/dashboard')
+  )
 }
 
 function getSecret(): Uint8Array {
@@ -17,7 +27,7 @@ function getSecret(): Uint8Array {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  if (isPublicPath(pathname)) {
+  if (isPublicPath(pathname) || isDemoDashboardPath(request)) {
     return NextResponse.next()
   }
 

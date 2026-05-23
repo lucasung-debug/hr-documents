@@ -10,11 +10,14 @@ export default function AdminDashboardPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
   const [reminderLoading, setReminderLoading] = useState(false)
+  const [demoMode, setDemoMode] = useState(false)
 
   const fetchDashboard = useCallback(async () => {
     try {
       setLoading(true)
-      const res = await fetch('/api/admin/dashboard')
+      const isDemo = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('demo') === '1'
+      setDemoMode(isDemo)
+      const res = await fetch(`/api/admin/dashboard${isDemo ? '?demo=1' : ''}`)
       if (!res.ok) {
         if (res.status === 403) {
           setError('관리자 권한이 필요합니다.')
@@ -95,12 +98,19 @@ export default function AdminDashboardPage() {
         </button>
       </div>
 
+      {demoMode && (
+        <div className="rounded-apple-lg border border-yellow-200 bg-yellow-50 px-4 py-3 text-sm text-yellow-900">
+          데모 모드: 가상 입사자 데이터로 표시되며 Google Sheets 인증과 외부 연동을 사용하지 않습니다.
+        </div>
+      )}
+
       <StatsCards stats={data.stats} />
 
       <EmployeeTable
         employees={data.employees}
         onSendReminder={handleSendReminder}
         reminderLoading={reminderLoading}
+        demoMode={demoMode}
       />
     </div>
   )

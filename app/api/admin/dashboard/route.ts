@@ -7,6 +7,15 @@ import type { SessionStatus } from '@/types/employee'
 import type { DashboardEmployee, DashboardStats, DashboardResponse } from '@/types/admin'
 import { apiOk, apiFromUnknown } from '@/lib/api'
 import { createLogger } from '@/lib/logger'
+import { demoDashboardResponse } from '@/lib/onboarding/demo-fixtures'
+import { isDashboardDemoEnabled } from '@/lib/onboarding/demo-mode'
+import type {
+  NotificationStatus,
+  OnboardingActionRequired,
+  OnboardingCaseStatus,
+  PdfPacketStatus,
+  WorkspaceSyncStatus,
+} from '@/types/onboarding'
 
 const log = createLogger('[admin/dashboard]')
 
@@ -15,6 +24,10 @@ const log = createLogger('[admin/dashboard]')
  * Returns all employees with their onboarding status and aggregate stats.
  */
 export async function GET(request: NextRequest) {
+  if (request.nextUrl.searchParams.get('demo') === '1' && isDashboardDemoEnabled()) {
+    return apiOk(demoDashboardResponse)
+  }
+
   const blocked = requireAdmin(request.headers)
   if (blocked) return blocked
 
@@ -32,7 +45,7 @@ export async function GET(request: NextRequest) {
       withRetry(() =>
         sheets.spreadsheets.values.get({
           spreadsheetId: SPREADSHEET_ID(),
-          range: `${SHEET_NAMES.DOCUMENT_STATUS}!A2:L`,
+          range: `${SHEET_NAMES.DOCUMENT_STATUS}!A2:X`,
         })
       ),
     ])
@@ -51,6 +64,9 @@ export async function GET(request: NextRequest) {
     let completed = 0
     let inProgress = 0
     let pending = 0
+    let actionRequired = 0
+    let syncFailed = 0
+    let archivePending = 0
 
     for (const row of empRows) {
       const r = row as string[]
@@ -85,6 +101,12 @@ export async function GET(request: NextRequest) {
       const sessionStatus = (r[11] as SessionStatus) ?? 'PENDING'
       const allCompletedAt = docRow?.[9] ?? ''
       const emailSentAt = docRow?.[10] ?? ''
+      const caseStatus = (docRow?.[13] || (allCompletedAt ? 'docs_completed' : 'collecting_documents')) as OnboardingCaseStatus
+      const pdfPacketStatus = (docRow?.[14] || 'pending') as PdfPacketStatus
+      const workspaceSyncStatus = (docRow?.[15] || 'pending') as WorkspaceSyncStatus
+      const notificationStatus = (docRow?.[16] || (emailSentAt ? 'email_sent' : 'none')) as NotificationStatus
+      const actionRequiredValue = (docRow?.[17] || 'none') as OnboardingActionRequired
+      const driveArchivedAt = docRow?.[20] ?? ''
 
       employees.push({
         employee_id: employeeId,
@@ -96,16 +118,29 @@ export async function GET(request: NextRequest) {
         completed_count: completedCount,
         all_completed_at: allCompletedAt,
         email_sent_at: emailSentAt,
+        case_id: docRow?.[12] ?? '',
+        case_status: caseStatus,
+        pdf_packet_status: pdfPacketStatus,
+        workspace_sync_status: workspaceSyncStatus,
+        notification_status: notificationStatus,
+        action_required: actionRequiredValue,
+        blocked_reason: docRow?.[18] ?? '',
+        drive_archived_at: driveArchivedAt,
+        slack_notified_at: docRow?.[21] ?? '',
+        case_schema_version: Number(docRow?.[23] || 1),
       })
 
       // Stats
-      if (allCompletedAt || emailSentAt) {
+      if (caseStatus === 'archived' || allCompletedAt || emailSentAt) {
         completed++
       } else if (sessionStatus === 'IN_PROGRESS') {
         inProgress++
       } else {
         pending++
       }
+      if (caseStatus === 'action_required') actionRequired++
+      if (workspaceSyncStatus === 'failed') syncFailed++
+      if (caseStatus === 'docs_completed' && pdfPacketStatus === 'generated' && !driveArchivedAt) archivePending++
     }
 
     const total = employees.length
@@ -114,6 +149,9 @@ export async function GET(request: NextRequest) {
       completed,
       in_progress: inProgress,
       pending,
+      action_required: actionRequired,
+      sync_failed: syncFailed,
+      archive_pending: archivePending,
       completion_rate: total > 0 ? Math.round((completed / total) * 1000) / 10 : 0,
     }
 

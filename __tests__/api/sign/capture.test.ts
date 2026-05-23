@@ -89,6 +89,25 @@ function makeRequest(employeeId: string) {
   )
 }
 
+async function waitForMockCall(
+  mockFn: jest.Mock,
+  predicate: () => boolean = () => mockFn.mock.calls.length > 0,
+  timeoutMs = 250
+): Promise<void> {
+  const start = Date.now()
+
+  while (!predicate()) {
+    if (Date.now() - start >= timeoutMs) {
+      throw new Error('Timed out waiting for expected mock call')
+    }
+    await new Promise((resolve) => setTimeout(resolve, 5))
+  }
+}
+
+async function flushAsyncRegeneration(): Promise<void> {
+  await new Promise((resolve) => setImmediate(resolve))
+}
+
 describe('sign/capture — personal_info_consent regeneration', () => {
   let validPng: Buffer
 
@@ -139,6 +158,8 @@ describe('sign/capture — personal_info_consent regeneration', () => {
 
     expect(json.success).toBe(true)
     expect(getEmployeeById).toHaveBeenCalledWith('EMP001')
+    await waitForMockCall(fs.writeFileSync as jest.Mock)
+
     expect(buildBaseVariables).toHaveBeenCalled()
     expect(generatePdfFromTemplate).toHaveBeenCalledWith('personal_info_consent', { name: '홍길동' })
     expect(ensureSessionDir).toHaveBeenCalledWith('EMP001')
@@ -157,6 +178,8 @@ describe('sign/capture — personal_info_consent regeneration', () => {
     expect(json.success).toBe(true)
     expect(json.signHash).toBe('mock-hash')
     expect(writeSignature).toHaveBeenCalledWith('EMP001', validPng)
+    expect(getEmployeeById).toHaveBeenCalledWith('EMP001')
+    await flushAsyncRegeneration()
     expect(fs.writeFileSync).not.toHaveBeenCalled()
   })
 
@@ -167,6 +190,8 @@ describe('sign/capture — personal_info_consent regeneration', () => {
     const json = await response.json()
 
     expect(json.success).toBe(true)
+    expect(getEmployeeById).toHaveBeenCalledWith('UNKNOWN')
+    await flushAsyncRegeneration()
     expect(fs.writeFileSync).not.toHaveBeenCalled()
   })
 })

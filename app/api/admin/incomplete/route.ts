@@ -89,6 +89,16 @@ export async function GET(request: NextRequest) {
         completed_count: completedCount,
         all_completed_at: '',
         email_sent_at: '',
+        case_id: '',
+        case_status: 'collecting_documents',
+        pdf_packet_status: 'pending',
+        workspace_sync_status: 'pending',
+        notification_status: 'none',
+        action_required: 'none',
+        blocked_reason: '',
+        drive_archived_at: '',
+        slack_notified_at: '',
+        case_schema_version: 1,
       })
     }
 

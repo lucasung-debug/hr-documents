@@ -18,6 +18,7 @@ import type { DocumentKey } from '@/types/document'
 import { SESSION_STATUS } from '@/types/employee'
 import { createLogger } from '@/lib/logger'
 import { apiFromUnknown } from '@/lib/api'
+import { syncOnboardingWorkspace } from '@/lib/onboarding/workspace-sync'
 
 const log = createLogger('[email/send]')
 
@@ -113,6 +114,12 @@ export async function POST(request: NextRequest) {
       markEmailSent(rowIndex, signHash),
       updateSessionStatus(empResult.rowIndex, SESSION_STATUS.COMPLETED),
     ])
+
+    try {
+      await syncOnboardingWorkspace({ employeeId, attachments })
+    } catch {
+      log.warn('Onboarding workspace sync failed after email delivery')
+    }
 
     // 10. Delete temp files (fire and forget — don't block response)
     try {

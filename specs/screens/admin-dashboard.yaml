@@ -1,0 +1,59 @@
+version: "2.0"
+screen:
+  name: HR 온보딩 운영 대시보드
+  route: /admin/dashboard
+  layout: dashboard-main
+  demo_goal: 더미 데이터만으로 구동 영상을 찍을 수 있는 운영 허브 화면
+
+data_requirements:
+  - resource: onboarding_cases
+    needs:
+      - case_id
+      - name
+      - department
+      - hire_date
+      - case_status
+      - action_required
+      - blocked_reason
+      - pdf_packet_status
+      - workspace_sync_status
+      - notification_status
+      - completed_count
+      - documents
+      - drive_archived_at
+      - slack_notified_at
+    filters:
+      status: [all, action_required, archive_pending, sync_failed, completed]
+      search: name_or_department_or_case_id
+
+components:
+  - id: operation_summary_cards
+    type: metric_cards
+    position: top
+    function: 전체, 완료, 진행중, 조치 필요, 동기화 실패, 보관 대기 수치 표시
+  - id: action_required_lane
+    type: priority_list
+    position: main
+    function: HR 담당자가 오늘 처리해야 할 케이스를 먼저 보여줌
+  - id: case_table
+    type: expandable_table
+    position: main
+    function: 케이스별 문서/보관/알림 상태와 blocked_reason 표시
+  - id: demo_mode_banner
+    type: notice
+    position: top
+    function: 현재 데이터가 데모 더미 데이터임을 명확히 표시
+
+tests:
+  - name: 데모 모드 로드
+    when: /admin/dashboard?demo=1 접속
+    then: [더미 케이스 표시, demo_mode_banner 표시, 외부 Google Sheets 인증 요구 없음]
+  - name: 조치 필요 필터
+    when: action_required 필터 클릭
+    then: [action_required != none 케이스만 표시]
+  - name: 개인정보 보호
+    when: 케이스 상세 확장
+    then: [Drive public link 미표시, sign_hash 미표시]
+  - name: 운영 상태 가시성
+    when: 대시보드 초기 로드
+    then: [archive_pending, sync_failed, action_required 수치 표시]
