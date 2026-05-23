@@ -13,12 +13,27 @@ Last updated: 2026-05-23
 | 5. Email route archive integration | Gate existing send flow through PDF generation, archive skip/upload, and metadata update. | Task 4 verified. | `app/api/email/send/route.ts` changes and route tests. | Focused route tests plus type-check. | Require non-production Drive folder validation before live use. |
 | 6. Slack adapter | Add PII-free Slack notification adapter and tests. | Task 1 statuses, Task 5 metadata. | Slack client/notification helper/tests. | Focused Slack tests and type-check. | No employee name/phone/email/PDF content in payload. |
 | 7. Workspace sync orchestration | Coordinate Drive and Slack statuses with idempotency and retry-safe metadata patches. | Tasks 4-6. | Orchestration helper/tests. | Focused orchestration tests plus relevant repository tests. | Duplicate-safe retries; clear failure states. |
-| 8. Production readiness | Final migration runbook, env validation, and deprecation notes. | Tasks 1-7. | Ops docs, release checklist, rollback notes. | Full relevant test suite and `npm run type-check`. | No production enablement without HR approval and secret review. |
+| 8. Production readiness | Final migration runbook, env validation, and deprecation notes. | Tasks 1-7. | `docs/production-readiness/onboarding-operations-release-checklist.md`, `docs/production-readiness/onboarding-operations-runbook.md`, `docs/production-readiness/onboarding-operations-rollback.md` | Full relevant test suite, `npm run type-check`, build, lint, and production dependency audit. | No production enablement without HR approval and secret review. |
 
 ## Current Verification Commands
 
 ```bash
-npm run test -- --runInBand __tests__/lib/google/drive-archive.test.ts
 npm run type-check
+npm run test -- --runInBand
+npm run build
+npm run lint
+npm audit --audit-level=high --omit=dev
+
+# Task 1-7 focused historical checks
+npm run test -- --runInBand __tests__/lib/google/drive-archive.test.ts
 npm run test -- --runInBand __tests__/lib/onboarding/case-id.test.ts __tests__/lib/onboarding/status.test.ts __tests__/lib/onboarding/sheets-repository.test.ts __tests__/api/admin/dashboard-demo.test.ts __tests__/components/admin/dashboard-filters.test.ts __tests__/lib/google/drive-archive.test.ts
 ```
+
+Task 8 production readiness docs:
+
+- `docs/production-readiness/onboarding-operations-release-checklist.md`
+- `docs/production-readiness/onboarding-operations-runbook.md`
+- `docs/production-readiness/onboarding-operations-rollback.md`
+- `docs/reports/task8-production-readiness-evidence-20260523.md`
+
+Production live enablement remains NO-GO until HR approval, secret review, OAuth scope validation, Drive folder validation, Slack destination validation, verification commands, and dependency audit disposition are complete.

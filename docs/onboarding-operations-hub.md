@@ -15,11 +15,12 @@ One private, case-ID-driven loop for tracking onboarding packets from document c
 
 1. Employee documents reach signed/completed state.
 2. The system derives a stable `case_id`.
-3. PDF packet generation marks `pdf_packet_status`.
-4. Drive archive stores the private packet using a case-ID filename.
-5. Sheets metadata records `drive_file_id`, `drive_archived_at`, and sync status.
-6. Slack/email notification state advances after archive evidence exists.
-7. Dashboard filters show pending work and failures.
+3. Email success enters the onboarding operations path through `syncOnboardingWorkspace`.
+4. PDF packet generation marks `pdf_packet_status`.
+5. Drive archive stores the private packet using a case-ID filename.
+6. Sheets metadata records `drive_file_id`, `drive_archived_at`, and sync status.
+7. Slack/email notification state advances after archive evidence exists.
+8. Dashboard filters show pending work and failures.
 
 ## Evidence Contract
 
@@ -40,7 +41,7 @@ One private, case-ID-driven loop for tracking onboarding packets from document c
 
 ## What This Is Not
 
-- Not a live Drive or Slack integration until gated route work is complete.
+- Not a live Drive or Slack integration until production readiness gates are approved.
 - Not a public document sharing system.
 - Not a replacement for HR review of failed or blocked cases.
 - Not a source of truth for employee identity beyond existing Sheets records.
@@ -48,3 +49,12 @@ One private, case-ID-driven loop for tracking onboarding packets from document c
 ## Migration and Deprecation Note
 
 Onboarding metadata extends DOCUMENT_STATUS columns M:X while legacy document completion columns remain in place. New integrations should write through onboarding repository boundaries and avoid direct route-level Sheets mutations except where explicitly migrated and tested.
+
+## Production Readiness
+
+- Release checklist: [docs/production-readiness/onboarding-operations-release-checklist.md](production-readiness/onboarding-operations-release-checklist.md)
+- Operator runbook: [docs/production-readiness/onboarding-operations-runbook.md](production-readiness/onboarding-operations-runbook.md)
+- Rollback notes: [docs/production-readiness/onboarding-operations-rollback.md](production-readiness/onboarding-operations-rollback.md)
+- Task 8 evidence report: [docs/reports/task8-production-readiness-evidence-20260523.md](reports/task8-production-readiness-evidence-20260523.md)
+
+Production live enablement remains NO-GO until HR approval, secret review, OAuth scope validation, Drive folder validation, Slack destination validation, verification commands, and dependency audit disposition are complete.
