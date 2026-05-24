@@ -9,7 +9,7 @@ import { PdfCanvasViewer } from '@/components/documents/PdfCanvasViewer'
 import { useSession } from '@/components/providers/SessionProvider'
 import { apiFetch } from '@/lib/api/client-fetch'
 import { getCachedPreview, setCachedPreview } from '@/lib/api/preview-cache'
-import { demoSignedContractPath } from '@/lib/onboarding/demo-fixtures'
+import { DemoDocumentPreview } from '@/components/documents/DemoDocumentPreview'
 import { isClientDemoSession } from '@/lib/onboarding/demo-mode'
 
 interface PreviewItem {
@@ -173,10 +173,10 @@ export default function PreviewPage() {
                     <span className="text-sm">미리보기 생성 중...</span>
                   </div>
                 ) : (
-                  <iframe
-                    title="샘플 서명 계약서"
-                    src={demoSignedContractPath}
-                    className="w-full rounded-apple h-[50vh] sm:h-[60vh] lg:h-[600px] border border-apple-gray-100"
+                  <DemoDocumentPreview
+                    docLabel={DOCUMENT_LABELS[demoCurrent]}
+                    signatureBase64={signatureBase64}
+                    className="w-full"
                   />
                 )}
               </div>
