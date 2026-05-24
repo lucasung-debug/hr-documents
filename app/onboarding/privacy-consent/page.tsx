@@ -7,6 +7,7 @@ import { Checkbox } from '@/components/ui/Checkbox'
 import { Button } from '@/components/ui/Button'
 import { apiFetch } from '@/lib/api/client-fetch'
 import { useSession } from '@/components/providers/SessionProvider'
+import { isClientDemoSession } from '@/lib/onboarding/demo-mode'
 import {
   PRIVACY_CONSENT_INTRO,
   PRIVACY_CONSENT_SECTIONS,
@@ -48,6 +49,11 @@ export default function PrivacyConsentPage() {
     setError('')
 
     try {
+      if (isClientDemoSession()) {
+        setTimeout(() => router.push('/onboarding/signature'), 400)
+        return
+      }
+
       const res = await apiFetch('/api/docs/consent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

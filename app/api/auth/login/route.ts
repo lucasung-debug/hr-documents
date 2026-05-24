@@ -13,6 +13,7 @@ import { createLogger } from '@/lib/logger'
 import { ERROR_CODES } from '@/lib/errors'
 import { apiOk, apiError, apiFromUnknown } from '@/lib/api'
 import { checkRateLimit, resetRateLimit } from '@/lib/rate-limit'
+import { isDemoSearchParamEnabled } from '@/lib/onboarding/demo-mode'
 
 const log = createLogger('login')
 
@@ -34,8 +35,13 @@ export async function POST(request: NextRequest) {
     }
 
     const { name, phone } = parsed.data
+    const requestedDemoLogin = request.nextUrl.searchParams.get('demo') === '1'
+    const isDemoLogin = isDemoSearchParamEnabled(request.nextUrl.searchParams)
+    if (requestedDemoLogin && !isDemoLogin) {
+      return apiError('데모 모드는 사용할 수 없습니다.', 404, ERROR_CODES.AUTH_001)
+    }
 
-    const result = await findEmployeeByNameAndPhone(name, phone)
+    const result = await findEmployeeByNameAndPhone(name, phone, { demo: isDemoLogin })
     if (!result) {
       log.warn({ name }, 'Login attempt with invalid credentials')
       return apiError('이름 또는 휴대전화번호가 일치하지 않습니다.', 401, ERROR_CODES.AUTH_001)
@@ -50,7 +56,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Admin users skip onboarding session setup
-    if (employee.role !== 'admin') {
+    if (employee.role !== 'admin' && !isDemoLogin) {
       // Update session status to IN_PROGRESS
       await updateSessionStatus(rowIndex, SESSION_STATUS.IN_PROGRESS)
 
@@ -74,12 +80,13 @@ export async function POST(request: NextRequest) {
       name: employee.name,
       phone: employee.phone,
       role: employee.role,
+      ...(isDemoLogin ? { demo: true as const } : {}),
     })
 
     log.info({ employeeId: employee.employee_id }, 'Login successful')
     resetRateLimit(`login:${ip}`)
 
-    const response = apiOk({ success: true, name: employee.name, role: employee.role })
+    const response = apiOk({ success: true, name: employee.name, role: employee.role, demo: isDemoLogin })
     response.cookies.set('session_token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',

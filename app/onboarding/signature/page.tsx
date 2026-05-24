@@ -7,6 +7,8 @@ import { SignaturePreview } from '@/components/signature/SignaturePreview'
 import { useSession } from '@/components/providers/SessionProvider'
 import { Button } from '@/components/ui/Button'
 import { apiFetch } from '@/lib/api/client-fetch'
+import { demoSignatureHash } from '@/lib/onboarding/demo-fixtures'
+import { isClientDemoSession } from '@/lib/onboarding/demo-mode'
 
 export default function SignaturePage() {
   const router = useRouter()
@@ -32,6 +34,13 @@ export default function SignaturePage() {
     setError('')
 
     try {
+      if (isClientDemoSession()) {
+        setSignHash(demoSignatureHash)
+        setSignatureBase64(capturedDataUrl)
+        setTimeout(() => router.push('/onboarding/documents'), 400)
+        return
+      }
+
       const res = await apiFetch('/api/sign/capture', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

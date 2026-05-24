@@ -43,8 +43,15 @@ components:
     type: notice
     position: top
     function: 현재 데이터가 데모 더미 데이터임을 명확히 표시
+  - id: progress_chart
+    type: chart
+    position: top
+    function: 전체 진행률·상태 분포 시각화(완료/진행중/조치 필요/동기화 실패) — 숫자 카드 보완, 영상 S3 클라이맥스
 
 tests:
+  - name: 진행률 차트
+    when: 대시보드 초기 로드
+    then: [progress_chart에 상태 분포 시각화 표시]
   - name: 데모 모드 로드
     when: /admin/dashboard?demo=1 접속
     then: [더미 케이스 표시, demo_mode_banner 표시, 외부 Google Sheets 인증 요구 없음]

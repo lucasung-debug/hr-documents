@@ -2,6 +2,8 @@ import { getSheetsClient, SPREADSHEET_ID, SHEET_NAMES, withRetry } from './clien
 import { SESSION_STATUS } from '@/types/employee'
 import type { EmployeeMasterRow, SessionStatus, UserRole } from '@/types/employee'
 import { cache, CACHE_TTL } from '@/lib/cache/memory-cache'
+import { demoOnboardingEmployee } from '@/lib/onboarding/demo-fixtures'
+import { isDemoModeAvailable } from '@/lib/onboarding/demo-mode'
 
 // Column order must match EMPLOYEE_MASTER sheet exactly:
 // A: employee_id, B: name, C: address, D: birthday, E: phone,
@@ -30,8 +32,18 @@ function rowToEmployee(row: string[]): EmployeeMasterRow {
 
 export async function findEmployeeByNameAndPhone(
   name: string,
-  phone: string
+  phone: string,
+  options?: { demo?: boolean }
 ): Promise<{ employee: EmployeeMasterRow; rowIndex: number } | null> {
+  if (options?.demo) {
+    if (!isDemoModeAvailable()) return null
+    const normalizedPhone = phone.replace(/\D/g, '')
+    if (name === demoOnboardingEmployee.name && normalizedPhone === demoOnboardingEmployee.phone) {
+      return { employee: demoOnboardingEmployee, rowIndex: 0 }
+    }
+    return null
+  }
+
   const sheets = getSheetsClient()
   const range = `${SHEET_NAMES.EMPLOYEE_MASTER}!A2:N`
 

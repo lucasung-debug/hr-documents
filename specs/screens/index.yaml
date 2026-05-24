@@ -1,0 +1,29 @@
+version: "2.0"
+# 포트폴리오 데모 영상 강화 대상 화면 목록
+# 기획: docs/plans/2026-05-24-portfolio-video-enhancement.md
+screens:
+  - name: 랜딩/소개
+    route: /
+    file: landing.yaml
+    status: new
+    video_scene: S0
+  - name: 온보딩 데모 플로우
+    route: /onboarding
+    file: onboarding-demo-flow.yaml
+    status: new
+    video_scene: S1-S2
+  - name: 서명 무결성 검증 고지
+    route: /onboarding/signature
+    file: signature-integrity-notice.yaml
+    status: new
+    video_scene: S1
+  - name: HR 온보딩 운영 대시보드
+    route: /admin/dashboard
+    file: admin-dashboard.yaml
+    status: enhanced   # progress_chart 추가
+    video_scene: S3
+  - name: 접근 거부 (권한 없음)
+    route: /admin/*
+    file: access-denied.yaml
+    status: new
+    video_scene: S4

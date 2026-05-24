@@ -1,0 +1,38 @@
+version: "2.0"
+screen:
+  name: 서명 무결성 검증 고지
+  route: /onboarding/signature (notice step/overlay)
+  layout: centered-notice
+  demo_goal: 영상 S1 도메인 신호. HR 실무 깊이를 "정확하게" 전달
+  compliance_guard: ⚠️ 전자서명법 법적효력 주장 절대 금지. SHA-256은 변조 감지용이며 공인전자서명이 아님
+
+data_requirements:
+  - resource: onboarding_cases
+    needs: [sign_hash, signed_at]
+    note: 표시 시 sign_hash는 앞 8자리만 노출
+
+components:
+  - id: headline
+    type: headline
+    position: top
+    function: 핵심 한 줄 크게 — "서명 무결성 검증 (SHA-256 변조 감지)"
+  - id: integrity_explainer
+    type: text
+    position: main
+    function: 서명 데이터를 SHA-256 해시로 저장해 사후 변조를 탐지한다는 설명(법적효력 주장 없음)
+  - id: legal_scope_note
+    type: footnote
+    position: bottom
+    function: "법적 효력이 필요한 전자서명은 외부 공인 서비스 연동으로 확장 가능" — 현실감 있는 로드맵 언급
+  - id: consent_action
+    type: button
+    position: bottom
+    function: 확인 후 서명 진행
+
+tests:
+  - name: 정확한 문구
+    when: 고지 화면 표시
+    then: ["서명 무결성 검증" 표기, "전자서명법" 법적효력 주장 미표시]
+  - name: 영상 가독성
+    when: 화면 녹화
+    then: [핵심 한 줄이 크게 강조되어 영상에서 읽힘]

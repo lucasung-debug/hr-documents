@@ -50,3 +50,10 @@ test_pdf_export.mjs
 # Local tool configs
 .claude/
 .playwright-mcp/
+
+# Agent worker logs (local only)
+codex-task-*.log
+kimi-task.log
+npm-install.log
+typecheck.log
+test.log

@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/Button'
 import { MaterialsSection } from '@/components/employee/MaterialsSection'
 import { apiFetch } from '@/lib/api/client-fetch'
 import type { EmployeeInfoResponse } from '@/types/api'
+import { demoEmployeeInfo, demoOnboardingMaterials } from '@/lib/onboarding/demo-fixtures'
+import { isClientDemoSession } from '@/lib/onboarding/demo-mode'
 
 type Tab = 'info' | 'materials'
 
@@ -15,8 +17,17 @@ export default function EmployeeIdPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [activeTab, setActiveTab] = useState<Tab>('info')
+  const [demoMode, setDemoMode] = useState(false)
 
   useEffect(() => {
+    const isDemo = isClientDemoSession()
+    setDemoMode(isDemo)
+    if (isDemo) {
+      setInfo(demoEmployeeInfo)
+      setLoading(false)
+      return
+    }
+
     const fetchInfo = async () => {
       try {
         const res = await apiFetch('/api/employee/info')
@@ -109,7 +120,35 @@ export default function EmployeeIdPage() {
       )}
 
       {activeTab === 'materials' && (
-        <MaterialsSection />
+        demoMode ? (
+          <div className="flex flex-col gap-3">
+            {demoOnboardingMaterials.map((material) => (
+              <a
+                key={material.material_id}
+                href={material.file_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-4 bg-white border border-apple-gray-100 rounded-apple-lg p-4 shadow-apple-sm hover:border-apple-blue/30 hover:shadow-md transition-all"
+              >
+                <div className="flex-shrink-0 w-10 h-10 rounded-apple bg-apple-blue-light flex items-center justify-center">
+                  <svg className="w-5 h-5 text-apple-blue" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[14px] font-medium text-apple-gray-900 truncate">
+                    {material.title}
+                  </p>
+                  <p className="text-[12px] text-apple-gray-500 mt-0.5 line-clamp-1">
+                    {material.description}
+                  </p>
+                </div>
+              </a>
+            ))}
+          </div>
+        ) : (
+          <MaterialsSection />
+        )
       )}
 
       <div className="flex lg:justify-end">

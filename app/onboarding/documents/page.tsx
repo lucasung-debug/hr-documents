@@ -7,6 +7,9 @@ import { Button } from '@/components/ui/Button'
 import { apiFetch } from '@/lib/api/client-fetch'
 import { useSession } from '@/components/providers/SessionProvider'
 import type { DocListItem } from '@/types/api'
+import { DOC_STATUS } from '@/types/document'
+import { demoOnboardingDocuments } from '@/lib/onboarding/demo-fixtures'
+import { isClientDemoSession } from '@/lib/onboarding/demo-mode'
 
 export default function DocumentsPage() {
   const router = useRouter()
@@ -18,6 +21,16 @@ export default function DocumentsPage() {
   const [checkingAll, setCheckingAll] = useState(false)
 
   const fetchDocs = useCallback(async () => {
+    if (isClientDemoSession()) {
+      const demoDocs = demoOnboardingDocuments().filter(
+        (d: DocListItem) => d.key !== 'personal_info_consent'
+      )
+      setDocs(demoDocs)
+      setAllCompleted(demoDocs.every((d: DocListItem) => d.status !== DOC_STATUS.PENDING))
+      setLoading(false)
+      return
+    }
+
     try {
       const res = await apiFetch(`/api/docs/list?_t=${Date.now()}`)
       if (!res.ok) throw new Error('서류 목록 조회 실패')
@@ -42,6 +55,17 @@ export default function DocumentsPage() {
   }, [fetchDocs])
 
   const handleConsent = async (key: string) => {
+    if (isClientDemoSession()) {
+      setDocs((current) => {
+        const next = current.map((doc) =>
+          doc.key === key ? { ...doc, status: DOC_STATUS.SIGNED } : doc
+        )
+        setAllCompleted(next.every((doc) => doc.status !== DOC_STATUS.PENDING))
+        return next
+      })
+      return
+    }
+
     const res = await apiFetch('/api/docs/consent', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -57,6 +81,16 @@ export default function DocumentsPage() {
   const handleCheckAll = async () => {
     setCheckingAll(true)
     try {
+      if (isClientDemoSession()) {
+        const pending = docs.filter((doc) => doc.status === DOC_STATUS.PENDING)
+        if (pending.length === 0) {
+          router.push('/onboarding/preview')
+        } else {
+          setError(`아직 완료되지 않은 서류가 있습니다: ${pending.map((doc) => doc.label).join(', ')}`)
+        }
+        return
+      }
+
       const res = await apiFetch('/api/docs/check-all')
       const data = await res.json()
       if (data.allCompleted) {

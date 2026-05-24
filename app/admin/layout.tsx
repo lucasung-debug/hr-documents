@@ -1,14 +1,20 @@
-'use client'
-
-import { useRouter } from 'next/navigation'
+import type { ReactNode } from 'react'
+import { cookies, headers } from 'next/headers'
+import { redirect } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
+import { AccessDenied } from './access-denied'
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  const router = useRouter()
+async function logout() {
+  'use server'
+  cookies().delete('session_token')
+  redirect('/login')
+}
 
-  const handleLogout = () => {
-    document.cookie = 'session_token=; path=/; max-age=0'
-    router.push('/login')
+export default function AdminLayout({ children }: { children: ReactNode }) {
+  const role = headers().get('x-employee-role')
+
+  if (role !== 'admin') {
+    return <AccessDenied />
   }
 
   return (
@@ -18,9 +24,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <h1 className="text-base sm:text-lg font-bold text-apple-gray-900 tracking-tight truncate">
             HR 온보딩 대시보드
           </h1>
-          <Button variant="secondary" size="sm" onClick={handleLogout}>
-            로그아웃
-          </Button>
+          <form action={logout}>
+            <Button type="submit" variant="secondary" size="sm">
+              로그아웃
+            </Button>
+          </form>
         </div>
       </header>
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">

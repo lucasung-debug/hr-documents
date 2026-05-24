@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { jwtVerify } from 'jose'
-import { isDashboardDemoEnabled } from './lib/onboarding/demo-mode'
+import { isDashboardDemoEnabled, isDemoModeAvailable } from './lib/onboarding/demo-mode'
 
 const PUBLIC_PATHS = ['/api/auth/login', '/api/health', '/login', '/_next', '/favicon.ico']
 
@@ -43,12 +43,27 @@ export async function middleware(request: NextRequest) {
   try {
     const secret = getSecret()
     const { payload } = await jwtVerify(token, secret)
+    const isDemoSession = payload.demo === true
+
+    if (isDemoSession) {
+      if (!isDemoModeAvailable()) {
+        throw new Error('Demo sessions are disabled')
+      }
+
+      if (pathname.startsWith('/api/')) {
+        return NextResponse.json(
+          { error: '데모 세션에서는 실제 API를 사용할 수 없습니다.' },
+          { status: 403 }
+        )
+      }
+    }
 
     // Inject employee_id into request headers for API routes to consume
     const requestHeaders = new Headers(request.headers)
     requestHeaders.set('x-employee-id', String(payload.employee_id ?? ''))
     requestHeaders.set('x-employee-name', encodeURIComponent(String(payload.name ?? '')))
     requestHeaders.set('x-employee-role', String(payload.role ?? 'employee'))
+    if (isDemoSession) requestHeaders.set('x-demo-session', '1')
 
     return NextResponse.next({ request: { headers: requestHeaders } })
   } catch {
