@@ -1,0 +1,38 @@
+version: "2.0"
+screen:
+  name: 접근 거부 (권한 없음)
+  route: /admin/* (employee 접근 시)
+  layout: centered-notice
+  demo_goal: 영상 S4 보안 시연. 페이지 레벨 admin 가드 증명
+  note: 현재 app/admin/layout.tsx에 role 체크 없음 → 추가하여 employee redirect. 추가 시 기존 admin 경로 테스트 영향 점검
+
+data_requirements:
+  - resource: onboarding_cases
+    needs: []
+    note: 권한 판정은 JWT role 클레임 기반(데이터 불필요)
+
+components:
+  - id: denied_headline
+    type: headline
+    position: top
+    function: "접근 권한이 없습니다"
+  - id: reason_panel
+    type: notice
+    position: main
+    function: 접근 거부 사유 표시(관리자 권한 필요) — 단순 redirect보다 격상
+  - id: audit_hint
+    type: text
+    position: main
+    function: 접근 시도가 감사 이력에 기록됨을 안내(보안 깊이 신호)
+  - id: back_action
+    type: button
+    position: bottom
+    function: 본인 온보딩 화면으로 복귀
+
+tests:
+  - name: 직원 차단
+    when: role=employee가 /admin/dashboard 접근
+    then: [페이지 렌더 전 차단, 접근 거부 사유 표시]
+  - name: 관리자 통과
+    when: role=admin가 /admin/dashboard 접근
+    then: [대시보드 정상 표시]

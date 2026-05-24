@@ -1,0 +1,56 @@
+version: "2.0"
+screen:
+  name: 온보딩 데모 플로우
+  route: /onboarding (demo mode)
+  layout: stepper-main
+  demo_goal: 영상 S1~S2. 가짜 사원으로 로그인~완료~샘플 PDF까지 외부 API 없이 구동
+  isolation: 데모 모드는 프로덕션 빌드에서 비활성(빌드타임 격리 또는 demo:true JWT 클레임). 실 Google Sheets/Gmail 호출 없음
+
+data_requirements:
+  - resource: onboarding_cases
+    needs: [employee_id, name, department, hire_date, documents, completed_count]
+    source: demo_fixture   # 더미 사원, 외부 API 미사용
+
+components:
+  - id: demo_login
+    type: form
+    position: main
+    function: 가짜 사원 원클릭/프리필 로그인(더미 이름+전화). 실제 Sheets 조회 없음
+  - id: signature_pad
+    type: canvas
+    position: main
+    function: 전자서명 캔버스. 영상엔 본인 필체 금지(더미 서명)
+  - id: integrity_notice
+    type: notice
+    position: overlay
+    function: 서명 직전 "서명 무결성 검증" 고지(signature-integrity-notice 화면 참조)
+  - id: document_consent_list
+    type: checklist
+    position: main
+    function: 6종 서류 동의(영상은 2-3개만 시연, 나머지 타임랩스)
+  - id: sample_pdf_view
+    type: pdf_viewer
+    position: main
+    function: 미리 생성한 서명 박힌 샘플 PDF 표시. 생성 과정은 로딩 연출(Sheets 재구현 회피)
+  - id: completion_summary
+    type: summary
+    position: main
+    function: 완료 상태 + 감사정보(서명 시각, 해시 앞 8자리)
+  - id: demo_mode_banner
+    type: notice
+    position: top
+    function: 더미 데이터 데모임을 명시
+
+tests:
+  - name: 외부 API 없는 구동
+    when: 데모 모드로 로그인~완료 진행
+    then: [Google Sheets/Gmail 호출 없음, 끊김 없이 완료 도달]
+  - name: 샘플 PDF 표시
+    when: PDF 단계 도달
+    then: [서명 박힌 샘플 PDF 표시, 라이브 Sheets export 미발생]
+  - name: 무결성 고지 노출
+    when: 서명 직전
+    then: [서명 무결성 검증 고지 표시, 전자서명법 법적효력 문구 없음]
+  - name: PII 안전
+    when: 화면 녹화
+    then: [더미 이름/전화만 표시, 실제 PII 미표시, 해시 앞 8자리만]

@@ -1,0 +1,38 @@
+version: "2.0"
+screen:
+  name: 랜딩/소개
+  route: /
+  layout: marketing-hero
+  demo_goal: 영상 오프닝(S0) 겸 포트폴리오 진입점. 30초 안에 "무슨 문제를 푸는지" 전달
+  note: 현재 app/page.tsx는 /login redirect → 소개 페이지로 교체. 데모 진입은 별도 버튼으로 분리
+
+data_requirements: []   # 정적 콘텐츠 중심, 외부 데이터 불필요
+
+components:
+  - id: hero
+    type: hero
+    position: top
+    function: 문제 정의 한 줄 "출근 첫날 6종 서류를 종이로? 5분이면 끝납니다" + 제품명
+  - id: feature_highlights
+    type: card_row
+    position: main
+    function: 핵심 기능 3개(전자서명, 서명 박힌 PDF 자동 생성, HR 운영 대시보드) 요약
+  - id: demo_entry
+    type: cta_group
+    position: main
+    function: "신입 데모 체험" / "관리자 데모 보기" 2개 진입 버튼
+  - id: tech_trust
+    type: badge_row
+    position: bottom
+    function: PII 무유출 설계 · 121 테스트 · 프로덕션급 신뢰 배지
+
+tests:
+  - name: 진입점 표시
+    when: / 접속
+    then: [hero 표시, "신입 데모"/"관리자 데모" 버튼 2개 표시]
+  - name: 신입 데모 진입
+    when: "신입 데모 체험" 클릭
+    then: [온보딩 데모 플로우로 이동, 외부 인증 요구 없음]
+  - name: 관리자 데모 진입
+    when: "관리자 데모 보기" 클릭
+    then: [/admin/dashboard?demo=1로 이동]

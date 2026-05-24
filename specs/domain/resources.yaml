@@ -24,7 +24,10 @@ resources:
       - slack_notified_at
       - last_case_event_at
       - case_schema_version
+      - sign_hash
+      - signed_at
     privacy:
       pii_allowed_in_ui: [name, department, hire_date]
       pii_forbidden_in_slack: [name, phone, email, sign_hash, drive_file_id, pdf_url]
+      ui_display_rule: sign_hash는 UI/영상에서 앞 8자리만 노출
       demo_mode: 더미 데이터만 사용하며 실제 개인정보나 외부 연동 토큰을 사용하지 않음
