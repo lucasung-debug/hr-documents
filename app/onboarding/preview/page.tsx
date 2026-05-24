@@ -9,6 +9,8 @@ import { PdfCanvasViewer } from '@/components/documents/PdfCanvasViewer'
 import { useSession } from '@/components/providers/SessionProvider'
 import { apiFetch } from '@/lib/api/client-fetch'
 import { getCachedPreview, setCachedPreview } from '@/lib/api/preview-cache'
+import { demoSignedContractPath } from '@/lib/onboarding/demo-fixtures'
+import { isClientDemoSession } from '@/lib/onboarding/demo-mode'
 
 interface PreviewItem {
   key: DocumentKey
@@ -31,8 +33,12 @@ export default function PreviewPage() {
     }))
   )
   const [currentIndex, setCurrentIndex] = useState(0)
+  const [demoMode, setDemoMode] = useState<boolean | null>(null)
+  const [demoLoading, setDemoLoading] = useState(true)
 
   const fetchSinglePreview = useCallback(async (key: DocumentKey) => {
+    if (demoMode !== false) return
+
     // Check client-side cache first
     const cached = getCachedPreview(key)
     if (cached) {
@@ -85,9 +91,20 @@ export default function PreviewPage() {
         )
       )
     }
-  }, [signatureBase64])
+  }, [demoMode, signatureBase64])
 
   useEffect(() => {
+    setDemoMode(isClientDemoSession())
+  }, [])
+
+  useEffect(() => {
+    if (demoMode === null) return
+
+    if (demoMode) {
+      const timer = window.setTimeout(() => setDemoLoading(false), 900)
+      return () => window.clearTimeout(timer)
+    }
+
     // Sequential loading to prevent Google Sheets API 429 rate limits
     // (6 parallel requests × 6-9 API calls each = 36-54 simultaneous calls)
     let cancelled = false
@@ -99,9 +116,102 @@ export default function PreviewPage() {
     }
     loadSequentially()
     return () => { cancelled = true }
-  }, [fetchSinglePreview])
+  }, [demoMode, fetchSinglePreview])
 
   const current = previews[currentIndex]
+
+  if (demoMode === null) {
+    return (
+      <div className="flex justify-center items-center py-20">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-apple-blue" />
+      </div>
+    )
+  }
+
+  if (demoMode) {
+    const demoCurrent = DOCUMENT_KEYS[currentIndex]
+
+    return (
+      <div className="flex flex-col gap-6">
+        <div>
+          <h2 className="text-[24px] font-bold text-apple-gray-900 tracking-[-0.01em]">서류 최종 확인</h2>
+          <p className="text-apple-gray-500 mt-1 text-[15px]">
+            서명된 샘플 서류를 확인해주세요.
+          </p>
+        </div>
+
+        <div className="lg:flex lg:gap-6">
+          <div className="lg:w-48 flex-shrink-0 mb-4 lg:mb-0">
+            <nav className="flex lg:flex-col gap-1 overflow-x-auto lg:overflow-visible">
+              {DOCUMENT_KEYS.map((key, i) => (
+                <button
+                  key={key}
+                  onClick={() => setCurrentIndex(i)}
+                  className={`
+                    flex-shrink-0 text-left px-3 py-3 rounded-apple text-sm font-medium transition-colors min-h-[44px]
+                    ${i === currentIndex
+                      ? 'bg-apple-blue-light text-apple-blue'
+                      : 'text-apple-gray-700 hover:bg-apple-gray-100'
+                    }
+                  `}
+                >
+                  {DOCUMENT_LABELS[key]}
+                </button>
+              ))}
+            </nav>
+          </div>
+
+          <div className="flex-1">
+            <div className="bg-white rounded-apple-lg border border-apple-gray-100 shadow-apple-sm overflow-hidden">
+              <div className="bg-apple-gray-50 px-4 py-3 border-b border-apple-gray-100">
+                <h3 className="font-medium text-apple-gray-900 text-[14px]">{DOCUMENT_LABELS[demoCurrent]}</h3>
+              </div>
+              <div className="p-4 flex justify-center min-h-48">
+                {demoLoading ? (
+                  <div className="flex items-center gap-2 text-apple-gray-500">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-apple-blue" />
+                    <span className="text-sm">미리보기 생성 중...</span>
+                  </div>
+                ) : (
+                  <iframe
+                    title="샘플 서명 계약서"
+                    src={demoSignedContractPath}
+                    className="w-full rounded-apple h-[50vh] sm:h-[60vh] lg:h-[600px] border border-apple-gray-100"
+                  />
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex gap-3 lg:hidden">
+          <Button
+            variant="secondary"
+            onClick={() => setCurrentIndex((i) => Math.max(0, i - 1))}
+            disabled={currentIndex === 0}
+            className="flex-1"
+          >
+            이전
+          </Button>
+          {currentIndex < DOCUMENT_KEYS.length - 1 ? (
+            <Button onClick={() => setCurrentIndex((i) => i + 1)} className="flex-1">
+              다음 서류
+            </Button>
+          ) : (
+            <Button onClick={() => router.push('/onboarding/employee-id')} className="flex-1">
+              확인 완료
+            </Button>
+          )}
+        </div>
+
+        <div className="hidden lg:flex justify-end">
+          <Button onClick={() => router.push('/onboarding/employee-id')} size="lg" className="min-w-[160px]">
+            확인 완료
+          </Button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col gap-6">

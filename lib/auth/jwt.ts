@@ -2,6 +2,7 @@ import { SignJWT, jwtVerify } from 'jose'
 import type { SessionPayload } from '@/types/employee'
 
 const SESSION_DURATION_SECONDS = 30 * 60 // 30 minutes
+export type AuthSessionPayload = SessionPayload & { demo?: true }
 
 function getSecret(): Uint8Array {
   const secret = process.env.JWT_SECRET
@@ -9,7 +10,7 @@ function getSecret(): Uint8Array {
   return new TextEncoder().encode(secret)
 }
 
-export async function signJwt(payload: Omit<SessionPayload, 'iat' | 'exp'>): Promise<string> {
+export async function signJwt(payload: Omit<AuthSessionPayload, 'iat' | 'exp'>): Promise<string> {
   const secret = getSecret()
   return new SignJWT(payload as Record<string, unknown>)
     .setProtectedHeader({ alg: 'HS256' })
@@ -18,8 +19,8 @@ export async function signJwt(payload: Omit<SessionPayload, 'iat' | 'exp'>): Pro
     .sign(secret)
 }
 
-export async function verifyJwt(token: string): Promise<SessionPayload> {
+export async function verifyJwt(token: string): Promise<AuthSessionPayload> {
   const secret = getSecret()
   const { payload } = await jwtVerify(token, secret)
-  return payload as unknown as SessionPayload
+  return payload as unknown as AuthSessionPayload
 }

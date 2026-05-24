@@ -6,6 +6,8 @@ import { SendConfirmModal } from '@/components/email/SendConfirmModal'
 import { Button } from '@/components/ui/Button'
 import { useSession } from '@/components/providers/SessionProvider'
 import { apiFetch } from '@/lib/api/client-fetch'
+import { demoSignedContractPath } from '@/lib/onboarding/demo-fixtures'
+import { isClientDemoSession } from '@/lib/onboarding/demo-mode'
 
 export default function CompletePage() {
   const router = useRouter()
@@ -14,8 +16,19 @@ export default function CompletePage() {
   const [sending, setSending] = useState(false)
   const [sent, setSent] = useState(false)
   const [error, setError] = useState('')
+  const [demoMode, setDemoMode] = useState(false)
 
   useEffect(() => {
+    const isDemo = isClientDemoSession()
+    setDemoMode(isDemo)
+    if (isDemo) {
+      setSending(true)
+      window.setTimeout(() => {
+        setSent(true)
+        setSending(false)
+      }, 700)
+      return
+    }
     setModalOpen(true)
   }, [])
 
@@ -23,6 +36,15 @@ export default function CompletePage() {
     setSending(true)
     setError('')
     try {
+      if (demoMode) {
+        window.setTimeout(() => {
+          setModalOpen(false)
+          setSent(true)
+          setSending(false)
+        }, 700)
+        return
+      }
+
       const res = await apiFetch('/api/email/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -42,7 +64,7 @@ export default function CompletePage() {
       setError('네트워크 오류가 발생했습니다. 인사팀에 문의해주세요.')
       setModalOpen(false)
     } finally {
-      setSending(false)
+      if (!demoMode) setSending(false)
     }
   }
 
@@ -65,21 +87,51 @@ export default function CompletePage() {
           <h2 className="text-[28px] font-bold text-apple-gray-900 tracking-[-0.02em]">완료되었습니다.</h2>
           <p className="text-xl text-apple-blue font-semibold mt-1">입사를 축하드립니다!</p>
           <p className="text-apple-gray-500 mt-3 text-[15px] leading-relaxed">
-            입사 서류가 인사팀과 귀하의 이메일로 발송되었습니다.<br />
-            이메일에서 서류 사본을 확인하실 수 있습니다.
+            {demoMode ? (
+              '데모 서류 흐름이 완료되었습니다.'
+            ) : (
+              <>
+                입사 서류가 인사팀과 귀하의 이메일로 발송되었습니다.<br />
+                이메일에서 서류 사본을 확인하실 수 있습니다.
+              </>
+            )}
           </p>
         </div>
 
-        <div className="w-full bg-apple-gray-50 rounded-apple-lg border border-apple-gray-100 p-5 text-sm text-apple-gray-700 text-left space-y-2">
+        {demoMode && (
+          <div className="w-full bg-white rounded-apple-lg border border-apple-gray-100 shadow-apple-sm overflow-hidden">
+            <div className="bg-apple-gray-50 px-4 py-3 border-b border-apple-gray-100 text-left">
+              <h3 className="font-medium text-apple-gray-900 text-[14px]">샘플 서명 계약서</h3>
+            </div>
+            <iframe
+              title="샘플 서명 계약서"
+              src={demoSignedContractPath}
+              className="w-full h-[50vh] sm:h-[60vh] border-0"
+            />
+          </div>
+        )}
+
+        {!demoMode && (
+          <div className="w-full bg-apple-gray-50 rounded-apple-lg border border-apple-gray-100 p-5 text-sm text-apple-gray-700 text-left space-y-2">
           <p className="font-semibold text-apple-gray-900">안내 사항</p>
           <ul className="list-disc list-inside space-y-1.5">
             <li>입사 첫날 신분증을 지참해주세요.</li>
             <li>온보딩 교육 자료를 미리 확인해주세요.</li>
             <li>문의 사항은 인사팀으로 연락해주세요.</li>
           </ul>
-        </div>
+          </div>
+        )}
 
         <p className="text-xs text-apple-gray-500">이 세션은 종료되었습니다.</p>
+      </div>
+    )
+  }
+
+  if (demoMode && sending) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-3 py-20 text-apple-gray-500">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-apple-blue" />
+        <p className="text-sm">샘플 PDF 준비 중...</p>
       </div>
     )
   }
@@ -89,7 +141,7 @@ export default function CompletePage() {
       <div>
         <h2 className="text-[24px] font-bold text-apple-gray-900 tracking-[-0.01em]">최종 전송</h2>
         <p className="text-apple-gray-500 mt-1 text-[15px]">
-          서명된 서류를 인사팀과 귀하의 이메일로 전송합니다.
+          {demoMode ? '서명된 샘플 서류를 확인합니다.' : '서명된 서류를 인사팀과 귀하의 이메일로 전송합니다.'}
         </p>
       </div>
 
@@ -109,12 +161,12 @@ export default function CompletePage() {
 
       {!error && (
         <Button onClick={() => setModalOpen(true)} size="lg" className="w-full">
-          전송하기
+          {demoMode ? '샘플 PDF 보기' : '전송하기'}
         </Button>
       )}
 
       <SendConfirmModal
-        isOpen={modalOpen}
+        isOpen={!demoMode && modalOpen}
         onConfirm={handleSend}
         onCancel={handleCancel}
         loading={sending}

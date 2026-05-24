@@ -1,10 +1,16 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { useSession } from '@/components/providers/SessionProvider'
+import { demoOnboardingEmployee, demoOnboardingPhoneDisplay } from '@/lib/onboarding/demo-fixtures'
+import {
+  clearClientDemoSession,
+  enableClientDemoSession,
+  isDemoModeAvailable,
+} from '@/lib/onboarding/demo-mode'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -14,6 +20,19 @@ export default function LoginPage() {
   const [phone, setPhone] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [demoRequested, setDemoRequested] = useState(false)
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const requested = isDemoModeAvailable() && params.get('demo') === '1'
+    setDemoRequested(requested)
+    if (requested) {
+      setName(demoOnboardingEmployee.name)
+      setPhone(demoOnboardingEmployee.phone)
+    } else {
+      clearClientDemoSession()
+    }
+  }, [])
 
   const handlePhoneChange = (value: string) => {
     setPhone(value.replace(/\D/g, '').slice(0, 11))
@@ -28,7 +47,7 @@ export default function LoginPage() {
 
     setLoading(true)
     try {
-      const res = await fetch('/api/auth/login', {
+      const res = await fetch(`/api/auth/login${demoRequested ? '?demo=1' : ''}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: name.trim(), phone }),
@@ -41,6 +60,11 @@ export default function LoginPage() {
       }
 
       setEmployeeName(data.name)
+      if (data.demo) {
+        enableClientDemoSession()
+      } else {
+        clearClientDemoSession()
+      }
       if (data.role === 'admin') {
         router.push('/admin/dashboard')
       } else {
@@ -66,6 +90,15 @@ export default function LoginPage() {
         </div>
 
         <div className="bg-white rounded-apple-xl shadow-apple-md border border-apple-gray-100 p-6 sm:p-8 lg:p-10">
+          {demoRequested && (
+            <div className="mb-5 rounded-apple-lg border border-apple-blue/20 bg-apple-blue-light p-4">
+              <p className="text-sm font-semibold text-apple-blue">데모 모드</p>
+              <p className="text-sm text-apple-gray-700 mt-1">
+                {demoOnboardingEmployee.name} / {demoOnboardingPhoneDisplay} 계정으로 진행합니다.
+              </p>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="flex flex-col gap-5">
             <Input
               id="login-name"
@@ -92,7 +125,7 @@ export default function LoginPage() {
             )}
 
             <Button type="submit" loading={loading} size="lg" className="w-full mt-1">
-              확인
+              {demoRequested ? '데모 시작' : '확인'}
             </Button>
           </form>
         </div>

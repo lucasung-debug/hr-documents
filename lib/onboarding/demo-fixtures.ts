@@ -1,6 +1,8 @@
-import { DOC_STATUS } from '@/types/document'
+import { DOC_STATUS, DOCUMENT_KEYS, DOCUMENT_LABELS, SIGNATURE_REQUIRED } from '@/types/document'
 import type { DocumentKey, DocumentStatus } from '@/types/document'
 import type { DashboardEmployee, DashboardResponse, DashboardStats } from '@/types/admin'
+import type { EmployeeMasterRow } from '@/types/employee'
+import type { DocListItem, EmployeeInfoResponse, OnboardingMaterial } from '@/types/api'
 
 const signedDocuments = (): Record<DocumentKey, DocumentStatus> => ({
   labor_contract: DOC_STATUS.SIGNED,
@@ -168,3 +170,66 @@ export const demoDashboardResponse: DashboardResponse = {
   employees: demoDashboardEmployees,
   stats,
 }
+
+export const demoOnboardingEmployee: EmployeeMasterRow = {
+  employee_id: 'DEMO-EMP-001',
+  name: '홍길동',
+  address: '서울특별시 중구 세종대로 110',
+  birthday: '1990-01-01',
+  phone: '01000000000',
+  email: 'demo.employee@example.com',
+  hire_date: '2026-06-01',
+  department: '인사운영팀',
+  position: '사원',
+  position_name: '사원',
+  pay_sec: 'monthly',
+  session_status: 'PENDING',
+  onboarding_link: '/login?demo=1',
+  role: 'employee',
+}
+
+export const demoOnboardingPhoneDisplay = '010-0000-0000'
+export const demoSignatureHash = 'demo-signature'
+
+export const demoOnboardingDocumentStatuses = (): Record<DocumentKey, DocumentStatus> => ({
+  labor_contract: DOC_STATUS.PENDING,
+  personal_info_consent: DOC_STATUS.SIGNED,
+  holiday_extension: DOC_STATUS.PENDING,
+  data_security_pledge: DOC_STATUS.PENDING,
+  compliance: DOC_STATUS.PENDING,
+  overtime_work: DOC_STATUS.PENDING,
+})
+
+export const demoOnboardingDocuments = (): DocListItem[] => {
+  const statuses = demoOnboardingDocumentStatuses()
+  return DOCUMENT_KEYS.map((documentKey) => {
+    return {
+      key: documentKey,
+      label: DOCUMENT_LABELS[documentKey],
+      status: statuses[documentKey],
+      signatureRequired: SIGNATURE_REQUIRED[documentKey],
+    }
+  })
+}
+
+export const demoEmployeeInfo: EmployeeInfoResponse = {
+  employee_id: demoOnboardingEmployee.employee_id,
+  name: demoOnboardingEmployee.name,
+  department: demoOnboardingEmployee.department,
+  position: demoOnboardingEmployee.position,
+  hire_date: demoOnboardingEmployee.hire_date,
+  onboarding_link: demoOnboardingEmployee.onboarding_link,
+}
+
+export const demoOnboardingMaterials: OnboardingMaterial[] = [
+  {
+    material_id: 'DEMO-MAT-001',
+    title: '입사 첫날 안내',
+    description: '출근 시간, 준비물, 담당자 연락처 안내',
+    file_url: '/demo/sample-signed-contract.pdf',
+    category: '온보딩',
+    order: 1,
+  },
+]
+
+export const demoSignedContractPath = '/demo/sample-signed-contract.pdf'

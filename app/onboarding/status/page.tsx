@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button'
 import { apiFetch } from '@/lib/api/client-fetch'
 import { DOCUMENT_LABELS } from '@/types/document'
 import type { DocumentKey } from '@/types/document'
+import { isClientDemoSession } from '@/lib/onboarding/demo-mode'
 
 export default function StatusPage() {
   const router = useRouter()
@@ -14,6 +15,13 @@ export default function StatusPage() {
   const [pending, setPending] = useState<DocumentKey[]>([])
 
   useEffect(() => {
+    if (isClientDemoSession()) {
+      setAllCompleted(true)
+      setPending([])
+      setChecking(false)
+      return
+    }
+
     const checkStatus = async () => {
       try {
         const res = await apiFetch('/api/docs/check-all')
