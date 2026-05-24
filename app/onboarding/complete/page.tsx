@@ -6,8 +6,8 @@ import { SendConfirmModal } from '@/components/email/SendConfirmModal'
 import { Button } from '@/components/ui/Button'
 import { useSession } from '@/components/providers/SessionProvider'
 import { apiFetch } from '@/lib/api/client-fetch'
-import { demoSignedContractPath } from '@/lib/onboarding/demo-fixtures'
 import { isClientDemoSession } from '@/lib/onboarding/demo-mode'
+import { DemoDocumentPreview } from '@/components/documents/DemoDocumentPreview'
 
 export default function CompletePage() {
   const router = useRouter()
@@ -103,11 +103,9 @@ export default function CompletePage() {
             <div className="bg-apple-gray-50 px-4 py-3 border-b border-apple-gray-100 text-left">
               <h3 className="font-medium text-apple-gray-900 text-[14px]">샘플 서명 계약서</h3>
             </div>
-            <iframe
-              title="샘플 서명 계약서"
-              src={demoSignedContractPath}
-              className="w-full h-[50vh] sm:h-[60vh] border-0"
-            />
+            <div className="p-4">
+              <DemoDocumentPreview docLabel="근로계약서" signatureBase64={signatureBase64} className="w-full" />
+            </div>
           </div>
         )}
 

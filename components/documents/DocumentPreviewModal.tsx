@@ -3,6 +3,8 @@
 import { useEffect } from 'react'
 import { Button } from '@/components/ui/Button'
 import { PdfCanvasViewer } from './PdfCanvasViewer'
+import { DemoDocumentPreview } from './DemoDocumentPreview'
+import { isClientDemoSession } from '@/lib/onboarding/demo-mode'
 
 interface DocumentPreviewModalProps {
   isOpen: boolean
@@ -84,7 +86,11 @@ export function DocumentPreviewModal({
             </div>
           )}
 
-          {!loading && !error && pdfBase64 && (
+          {!loading && !error && isClientDemoSession() && (
+            <DemoDocumentPreview docLabel={title} className="w-full" />
+          )}
+
+          {!loading && !error && !isClientDemoSession() && pdfBase64 && (
             <PdfCanvasViewer
               pdfBase64={pdfBase64}
               className="w-full rounded-apple h-[55vh] sm:h-[70vh] overflow-y-auto"

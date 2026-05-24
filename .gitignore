@@ -52,8 +52,22 @@ test_pdf_export.mjs
 .playwright-mcp/
 
 # Agent worker logs (local only)
-codex-task-*.log
+codex-*.log
 kimi-task.log
 npm-install.log
+playwright-setup.log
 typecheck.log
 test.log
+
+# Playwright recording output (local only)
+/test-results/
+/playwright-report/
+
+# Demo video files (kept locally at root/docs, not committed)
+*.mp4
+*.webm
+
+# More local worker/run logs
+dev-server.log
+playwright-run.log
+kimi-*.log
