@@ -66,3 +66,8 @@ test.log
 # Demo video files (kept locally at root/docs, not committed)
 *.mp4
 *.webm
+
+# More local worker/run logs
+dev-server.log
+playwright-run.log
+kimi-*.log
