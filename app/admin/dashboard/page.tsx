@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import type { DashboardResponse } from '@/types/admin'
 import { StatsCards } from '@/components/admin/StatsCards'
+import { StatusDistributionChart } from '@/components/admin/StatusDistributionChart'
 import { EmployeeTable } from '@/components/admin/EmployeeTable'
 import { IntegrationSetupPanel } from '@/components/admin/IntegrationSetupPanel'
 
@@ -106,6 +107,8 @@ export default function AdminDashboardPage() {
       )}
 
       <StatsCards stats={data.stats} />
+
+      <StatusDistributionChart employees={data.employees} />
 
       <IntegrationSetupPanel />
 
