@@ -71,3 +71,24 @@ test.log
 dev-server.log
 playwright-run.log
 kimi-*.log
+
+# --- 정리세션 보안+빌드 하드닝 (2026-06-05) ---
+.env.*
+!.env.example
+!.env.sample
+*.key
+*credentials*
+*-tokens.json
+serviceAccount*.json
+id_rsa
+dist/
+build/
+.next/
+out/
+coverage/
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+
